@@ -26,4 +26,4 @@
 
 * senha com hash
 * validação de input
-* upload com restrições
+* upload com restrições (tamanho, tipo) — ver [operacional-upload.md](operacional-upload.md)

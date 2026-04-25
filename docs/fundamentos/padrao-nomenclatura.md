@@ -68,12 +68,6 @@ Ex:
 
 ---
 
-## Banco (tabelas)
+## Base de dados (PostgreSQL)
 
-* Nome no singular
-* PascalCase
-
-Ex:
-
-* `User`
-* `Lesson`
+Não documentar convenções de tabelas/colunas neste ficheiro — usar apenas **[banco.md](../backend/banco.md)** (**snake_case** no PostgreSQL).

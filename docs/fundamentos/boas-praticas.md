@@ -27,6 +27,7 @@ Utilizar migrations para versionamento do banco
 Sempre usar DTOs (Request/Response)
 Nunca expor entidades diretamente
 Retornar respostas consistentes
+DTOs partilhados com clientes no projeto TeacherApp.Contracts (ver ../arquitetura/contracts.md)
 5. Evolução do projeto
 
 Caso uma implementação fuja desses padrões:

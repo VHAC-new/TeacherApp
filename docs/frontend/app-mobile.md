@@ -2,7 +2,7 @@
 
 ## Arquitetura
 
-MVVM
+MVVM — detalhes, CommunityToolkit e fluxo View → ViewModel → Service em [app-mobile-mvvm.md](app-mobile-mvvm.md).
 
 ---
 
