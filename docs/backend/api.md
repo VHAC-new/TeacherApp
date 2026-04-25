@@ -1,53 +1,29 @@
-# 📌 API
+# API — índice
 
-## Estrutura
-
-```text
-Controllers
-Application
-Domain
-Infrastructure
-Contracts
-Common
-```
+Documentação da **TeacherApp.Api** repartida por tema.
 
 ---
 
-## Controllers principais
+## Desenho
 
-* AuthController
-* ModulesController
-* LessonsController
-* ExercisesController
-* ProgressController
-* AudioController
+* [Estrutura em camadas](api-estrutura-camadas.md)
+* [Versionamento (`/api/v1/`)](api-versionamento.md)
+* [Endpoints (referência)](api-endpoints.md)
 
 ---
 
-## Endpoints exemplo
+## Operacional
 
-### Auth
-
-POST /api/auth/login
-GET /api/auth/me
-
-### Modules
-
-GET /api/modules
-
-### Lessons
-
-GET /api/modules/{id}/lessons
-
-### Exercises
-
-POST /api/exercises/{id}/submit
+* [Health check](operacional-health.md)
+* [Logging estruturado](operacional-logging.md)
+* [Upload](operacional-upload.md)
+* [CORS](operacional-cors.md)
+* [Swagger / OpenAPI](operacional-swagger.md)
 
 ---
 
-## Admin endpoints
+## Relacionado
 
-/api/admin/modules
-/api/admin/lessons
-/api/admin/exercises
-/api/admin/media
+* [Padrão de services](padrao-services.md)
+* [Segurança](seguranca.md)
+* [Contratos](../arquitetura/contracts.md)

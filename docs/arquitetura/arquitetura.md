@@ -1,57 +1,51 @@
-# 📌 Arquitetura do Projeto - App de Inglês
+# Arquitetura — índice
 
-## 🎯 Visão geral
-
-Sistema composto por:
-
-* App mobile (aluno) → .NET MAUI
-* Painel admin (professor) → Blazor Web
-* API → ASP.NET Core
-* Banco → PostgreSQL
-* Storage → S3
+Documentação da arquitetura do TeacherApp (app de inglês), **um tema por página** para evitar misturar contextos.
 
 ---
 
-## 🧱 Estrutura da solution
+## Visão e composição
 
-```text
-TeacherApp.sln
- ├─ TeacherApp.App
- ├─ TeacherApp.Admin
- ├─ TeacherApp.Api
- └─ TeacherApp.Tests
-```
+* [Visão geral — componentes](arquitetura-visao-geral.md)
+* [Solution e projetos](arquitetura-solution.md)
+* [Fluxo de dados](arquitetura-fluxo-dados.md)
+* [Contratos partilhados (TeacherApp.Contracts)](contracts.md)
 
 ---
 
-## 🔄 Fluxo do sistema
+## Frontends (detalhe)
 
-Aluno:
-App MAUI → API → Banco / Storage
-
-Professor:
-Blazor → API → Banco / Storage
-
----
-
-## 🧠 Decisões importantes
-
-* API centraliza toda regra de negócio
-* App não acessa banco diretamente
-* Admin separado do app
-* Áudios no S3 (não no banco)
-* EF Core + Migrations
-* JWT + Roles
+* [App mobile — telas e pastas](../frontend/app-mobile.md)
+* [App mobile — MVVM](../frontend/app-mobile-mvvm.md)
+* [Admin Blazor](../frontend/admin.md)
+* [Admin — hosting Blazor Server](../frontend/admin-hosting.md)
 
 ---
 
-## 📚 Documentação
+## Backend e domínio
 
-* dominio.md
-* api.md
-* banco.md
-* admin.md
-* app-mobile.md
-* seguranca.md
-* storage.md
-* boas-praticas.md
+* [API — índice](../backend/api.md)
+* [Domínio](../dominio/dominio.md)
+* [Banco de dados](../backend/banco.md)
+* [Storage](../backend/storage.md)
+* [Segurança](../backend/seguranca.md)
+* [Padrão de services](../backend/padrao-services.md)
+
+---
+
+## Fundamentos
+
+* [Boas práticas](../fundamentos/boas-praticas.md)
+* [Padrão de nomenclatura (C#)](../fundamentos/padrao-nomenclatura.md)
+* [Testes](../fundamentos/testes.md)
+* [Git workflow](../fundamentos/git-workflow.md)
+
+---
+
+## Decisões resumidas
+
+* API centraliza regra de negócio; clientes não acedem ao banco diretamente
+* Áudios em **S3**, metadados na API/BD
+* **EF Core** com migrations
+* **JWT** e roles (ver segurança)
+* MAUI com **MVVM Toolkit**; admin em **Blazor Server**

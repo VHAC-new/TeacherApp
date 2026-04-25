@@ -1,34 +1,45 @@
-# 📚 Documentação - TeacherApp
+# TeacherApp
 
-## 📌 Arquitetura
-- arquitetura.md
+## Documentação
 
-## 🧠 Domínio
-- dominio.md
+### Arquitetura
 
-## 🌐 API
-- api.md
+* [Índice de arquitetura](docs/arquitetura/arquitetura.md)
+* [Visão geral — componentes](docs/arquitetura/arquitetura-visao-geral.md)
+* [Solution e projetos](docs/arquitetura/arquitetura-solution.md)
+* [Fluxo de dados](docs/arquitetura/arquitetura-fluxo-dados.md)
+* [Contratos (TeacherApp.Contracts)](docs/arquitetura/contracts.md)
 
-## 🗄️ Banco
-- banco.md
+### Domínio
 
-## 🎵 Storage
-- storage.md
+* [Domínio e regras](docs/dominio/dominio.md)
 
-## 🔐 Segurança
-- seguranca.md
+### Backend
 
-## 🧑‍🏫 Admin
-- admin.md
+* [API — índice](docs/backend/api.md)
+* [API — estrutura em camadas](docs/backend/api-estrutura-camadas.md)
+* [API — versionamento](docs/backend/api-versionamento.md)
+* [API — endpoints](docs/backend/api-endpoints.md)
+* [Banco de dados](docs/backend/banco.md)
+* [Storage](docs/backend/storage.md)
+* [Segurança](docs/backend/seguranca.md)
+* [Padrão de services](docs/backend/padrao-services.md)
+* [Health](docs/backend/operacional-health.md)
+* [Logging](docs/backend/operacional-logging.md)
+* [Upload](docs/backend/operacional-upload.md)
+* [CORS](docs/backend/operacional-cors.md)
+* [Swagger](docs/backend/operacional-swagger.md)
 
-## 📱 App Mobile
-- app-mobile.md
+### Frontend
 
-## 📏 Padrões
-- boas-praticas.md
-- nomenclatura.md
-- services.md
-- test-unitario.md
+* [App mobile](docs/frontend/app-mobile.md)
+* [App mobile — MVVM](docs/frontend/app-mobile-mvvm.md)
+* [Admin](docs/frontend/admin.md)
+* [Admin — hosting Blazor Server](docs/frontend/admin-hosting.md)
 
-## 🔀 Git
-- git-workflow.md
+### Fundamentos
+
+* [Boas práticas](docs/fundamentos/boas-praticas.md)
+* [Padrão de nomenclatura (C#)](docs/fundamentos/padrao-nomenclatura.md)
+* [Testes](docs/fundamentos/testes.md)
+* [Git workflow](docs/fundamentos/git-workflow.md)

@@ -1,5 +1,9 @@
 # 📌 Painel Admin (Blazor)
 
+Hosting e modelo **Blazor Server**: [admin-hosting.md](admin-hosting.md).
+
+---
+
 ## Responsabilidades
 
 * CRUD módulos
