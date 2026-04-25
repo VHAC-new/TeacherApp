@@ -1,5 +1,7 @@
 # 📌 Banco de Dados
 
+## Conexão via json criando um appsettings
+
 ## Tecnologia
 
 * PostgreSQL

@@ -1,0 +1,61 @@
+# Build outputs
+bin/
+obj/
+artifacts/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+**/project.lock.json
+**/project.fragment.lock.json
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# Test results / coverage
+TestResults/
+coverage*/
+
+# ASP.NET Core
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+
+# Secrets
+**/*.secrets.json
+**/secrets.json
+*.pfx
+*.cer
+*.key
+*.pem
+
+# MAUI / Xamarin / Android / iOS
+**/Resources/**/obj/
+**/platforms/**/obj/
+**/*.keystore
+**/*.jks
+**/*.mobileprovision
+**/*.ipa
+**/*.apk
+**/*.aab
+
+# Android SDK/NDK local paths (if checked in by accident)
+local.properties
+
