@@ -1,14 +1,17 @@
 using Microsoft.EntityFrameworkCore;
+using TeacherApp.Api.Domain;
 
 namespace TeacherApp.Api.Data;
 
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<User> Users => Set<User>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Mappings will be added in Data/Mappings as entities are introduced.
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 }
 
