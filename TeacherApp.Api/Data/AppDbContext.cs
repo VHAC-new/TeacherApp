@@ -8,6 +8,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<User> Users => Set<User>();
     public DbSet<Module> Modules => Set<Module>();
     public DbSet<Lesson> Lessons => Set<Lesson>();
+    public DbSet<Exercise> Exercises => Set<Exercise>();
+    public DbSet<FinalExercise> FinalExercises => Set<FinalExercise>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
