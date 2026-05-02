@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using TeacherApp.Api.Application.Admin.Exercises;
+using TeacherApp.Api.Application.Admin.FinalExercises;
 using TeacherApp.Api.Application.Admin.Lessons;
 using TeacherApp.Api.Application.Admin.Modules;
 using TeacherApp.Api.Application.Auth;
@@ -58,6 +60,8 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connect
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminModuleService, AdminModuleService>();
 builder.Services.AddScoped<IAdminLessonService, AdminLessonService>();
+builder.Services.AddScoped<IAdminExerciseService, AdminExerciseService>();
+builder.Services.AddScoped<IAdminFinalExerciseService, AdminFinalExerciseService>();
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
 var jwtAudience = builder.Configuration["Jwt:Audience"];
