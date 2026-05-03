@@ -4,6 +4,11 @@ Hosting e modelo **Blazor Server**: [admin-hosting.md](admin-hosting.md).
 
 ---
 
+## Suporte para tema Claro/Escuro
+
+---
+
+
 ## Responsabilidades
 
 * CRUD módulos

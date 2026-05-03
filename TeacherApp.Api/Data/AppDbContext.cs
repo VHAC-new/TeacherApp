@@ -10,6 +10,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<Exercise> Exercises => Set<Exercise>();
     public DbSet<FinalExercise> FinalExercises => Set<FinalExercise>();
+    public DbSet<ExerciseAttempt> ExerciseAttempts => Set<ExerciseAttempt>();
+    public DbSet<MediaFile> MediaFiles => Set<MediaFile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -6,6 +6,10 @@ MVVM — detalhes, CommunityToolkit e fluxo View → ViewModel → Service em [a
 
 ---
 
+## Suporte para tema Claro/Escuro
+
+---
+
 ## Estrutura
 
 ```text
