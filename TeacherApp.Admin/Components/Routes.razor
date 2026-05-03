@@ -1,6 +1,57 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
-    </Found>
-</Router>
+﻿@rendermode InteractiveServer
+@inject AdminThemeState ThemeState
+@implements IDisposable
+
+<MudThemeProvider IsDarkMode="@ThemeState.IsDarkMode"
+                  IsDarkModeChanged="OnDarkModeChangedAsync"
+                  Theme="@AdminThemes.Default"
+                  ObserveSystemDarkModeChange="false" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    @if (context.User.Identity?.IsAuthenticated != true)
+                    {
+                        <RedirectToLogin />
+                    }
+                    else
+                    {
+                        <MudText Color="Color.Error">Acesso negado.</MudText>
+                    }
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+    </Router>
+</CascadingAuthenticationState>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ThemeState.ChangedAsync += OnThemeChangedAsync;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await ThemeState.InitializeAsync();
+    }
+
+    private Task OnThemeChangedAsync() => InvokeAsync(StateHasChanged);
+
+    private async Task OnDarkModeChangedAsync(bool value)
+    {
+        await ThemeState.SetDarkModeAsync(value);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ThemeState.ChangedAsync -= OnThemeChangedAsync;
+    }
+}

@@ -122,7 +122,17 @@ public sealed class AdminMediaService(
             return ToResponse(entity);
         }
 
-        var head = await s3.HeadObjectAsync(entity.StoragePath, cancellationToken);
+        S3ObjectHead? head;
+        try
+        {
+            head = await s3.HeadObjectAsync(entity.StoragePath, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Failed to verify S3 object '{entity.StoragePath}': {ex.Message}", ex);
+        }
+
         if (head is null)
         {
             return null;
@@ -172,6 +182,27 @@ public sealed class AdminMediaService(
         db.MediaFiles.Remove(entity);
         await db.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    public async Task<int> CleanupIncompleteAsync(TimeSpan olderThan, CancellationToken cancellationToken)
+    {
+        var cutoff = DateTimeOffset.UtcNow - olderThan;
+        var stale = await db.MediaFiles
+            .Where(x => !x.UploadCompleted && x.UploadedAt < cutoff)
+            .ToListAsync(cancellationToken);
+
+        foreach (var entity in stale)
+        {
+            if (s3.IsEnabled)
+            {
+                try { await s3.DeleteObjectAsync(entity.StoragePath, cancellationToken); }
+                catch { /* Object may already be gone */ }
+            }
+        }
+
+        db.MediaFiles.RemoveRange(stale);
+        await db.SaveChangesAsync(cancellationToken);
+        return stale.Count;
     }
 
     private static void ValidateUpload(string fileName, string contentType)

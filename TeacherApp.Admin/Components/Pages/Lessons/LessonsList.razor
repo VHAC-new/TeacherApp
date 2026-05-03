@@ -1,0 +1,275 @@
+@page "/lessons"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject HttpClient Http
+@inject IDialogService DialogService
+
+<PageTitle>Lições — TeacherApp Admin</PageTitle>
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h4">Lições</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenForm(null))" Disabled="@(_modules.Count == 0)">Nova Lição</MudButton>
+</MudStack>
+
+<MudSelect T="Guid?"
+           Value="_filterModuleId"
+           ValueChanged="OnModuleFilterChangedAsync"
+           Label="Filtrar por módulo"
+           Clearable="true"
+           Class="mb-4"
+           Style="max-width: 320px;">
+    <MudSelectItem T="Guid?" Value="@null">Todos</MudSelectItem>
+    @foreach (var m in _modules)
+    {
+        <MudSelectItem T="Guid?" Value="@m.Id">@m.Title</MudSelectItem>
+    }
+</MudSelect>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (_lessons.Count == 0)
+{
+    <MudText Typo="Typo.body1" Color="Color.Secondary">Nenhuma lição encontrada.</MudText>
+}
+else
+{
+    <MudTable Items="@_lessons.OrderBy(x => x.Order).ToList()" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
+        <HeaderContent>
+            <MudTh>Ordem</MudTh>
+            <MudTh>Título</MudTh>
+            <MudTh>Módulo</MudTh>
+            <MudTh>Descrição</MudTh>
+            <MudTh>Áudio (Media)</MudTh>
+            <MudTh Style="width: 200px;">Ações</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Ordem">@context.Order</MudTd>
+            <MudTd DataLabel="Título">@context.Title</MudTd>
+            <MudTd DataLabel="Módulo">@(_modules.FirstOrDefault(m => m.Id == context.ModuleId)?.Title ?? "—")</MudTd>
+            <MudTd DataLabel="Descrição">@(context.Description ?? "—")</MudTd>
+            <MudTd DataLabel="Áudio"><MudText Typo="Typo.caption">@(context.AudioMediaId?.ToString() ?? "—")</MudText></MudTd>
+            <MudTd DataLabel="Ações">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Class="mr-1" OnClick="@(() => OpenForm(context))">Editar</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => Delete(context.Id))">Excluir</MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+<MudDialog @bind-Visible="_showForm" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(_editing is null ? "Nova Lição" : "Editar Lição")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="_form" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <MudStack Spacing="3">
+                @if (_editing is null)
+                {
+                    <MudSelect T="string" @bind-Value="_form.ModuleId" Label="Módulo" Variant="Variant.Outlined" Required="true">
+                        @foreach (var m in _modules)
+                        {
+                            <MudSelectItem T="string" Value="@m.Id.ToString()">@m.Title</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+                <MudTextField @bind-Value="_form.Title" For="@(() => _form.Title)" Label="Título" Variant="Variant.Outlined" />
+                <MudTextField @bind-Value="_form.Description" Label="Descrição" Variant="Variant.Outlined" Lines="3" />
+                <MudNumericField @bind-Value="_form.Order" Label="Ordem" Variant="Variant.Outlined" Min="0" />
+                <MudTextField @bind-Value="_form.AudioMediaId"
+                              Label="ID da média de áudio (opcional)"
+                              Variant="Variant.Outlined"
+                              Placeholder="Guid do ficheiro em Média (audio/*)" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Deixe vazio se a lição não tiver áudio. Use um ficheiro já carregado na página Média.</MudText>
+                @if (!string.IsNullOrEmpty(_formError))
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true">@_formError</MudAlert>
+                }
+                <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd">
+                    <MudButton Variant="Variant.Text" OnClick="CloseForm">Cancelar</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="_saving">
+                        @if (_saving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        }
+                        else
+                        {
+                            <span>Salvar</span>
+                        }
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </EditForm>
+    </DialogContent>
+</MudDialog>
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
+}
+
+@code {
+    private static readonly DialogOptions _dialogOptions = new()
+    {
+        CloseButton = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Medium,
+        BackdropClick = true
+    };
+
+    private List<TeacherApp.Contracts.Modules.ModuleResponse> _modules = [];
+    private List<TeacherApp.Contracts.Lessons.LessonResponse> _lessons = [];
+    private bool _loading = true;
+    private string? _error;
+    private Guid? _filterModuleId;
+
+    private bool _showForm;
+    private bool _saving;
+    private string? _formError;
+    private TeacherApp.Contracts.Lessons.LessonResponse? _editing;
+    private LessonFormModel _form = new();
+
+    private sealed class LessonFormModel
+    {
+        public string ModuleId { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Título obrigatório")]
+        public string Title { get; set; } = "";
+        public string? Description { get; set; }
+        public int Order { get; set; } = 1;
+
+        public string? AudioMediaId { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _modules = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Modules.ModuleResponse>>("api/v1/admin/modules") ?? [];
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var query = _filterModuleId.HasValue ? $"?moduleId={_filterModuleId}" : "";
+            _lessons = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Lessons.LessonResponse>>($"api/v1/admin/lessons{query}") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao carregar lições.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnModuleFilterChangedAsync(Guid? id)
+    {
+        _filterModuleId = id;
+        await LoadAsync();
+    }
+
+    private void OpenForm(TeacherApp.Contracts.Lessons.LessonResponse? lesson)
+    {
+        _editing = lesson;
+        _form = lesson is null
+            ? new LessonFormModel
+            {
+                ModuleId = (_filterModuleId ?? _modules.FirstOrDefault()?.Id ?? Guid.Empty).ToString(),
+                Order = _lessons.Count + 1
+            }
+            : new LessonFormModel
+            {
+                Title = lesson.Title,
+                Description = lesson.Description,
+                Order = lesson.Order,
+                ModuleId = lesson.ModuleId.ToString(),
+                AudioMediaId = lesson.AudioMediaId?.ToString()
+            };
+        _formError = null;
+        _showForm = true;
+    }
+
+    private void CloseForm() => _showForm = false;
+
+    private async Task Save()
+    {
+        _saving = true;
+        _formError = null;
+        try
+        {
+            Guid? audioId = null;
+            if (!string.IsNullOrWhiteSpace(_form.AudioMediaId))
+            {
+                if (!Guid.TryParse(_form.AudioMediaId.Trim(), out var parsed))
+                {
+                    _formError = "ID da média de áudio inválido (deve ser um GUID).";
+                    return;
+                }
+
+                audioId = parsed;
+            }
+
+            HttpResponseMessage response;
+            if (_editing is null)
+            {
+                if (!Guid.TryParse(_form.ModuleId, out var moduleId))
+                {
+                    _formError = "Selecione um módulo.";
+                    return;
+                }
+                response = await Http.PostAsJsonAsync("api/v1/admin/lessons",
+                    new TeacherApp.Contracts.Lessons.CreateLessonRequest(moduleId, _form.Title, _form.Description, _form.Order, audioId));
+            }
+            else
+            {
+                response = await Http.PutAsJsonAsync($"api/v1/admin/lessons/{_editing.Id}",
+                    new TeacherApp.Contracts.Lessons.UpdateLessonRequest(_form.Title, _form.Description, _form.Order, audioId));
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _formError = $"Erro ({(int)response.StatusCode}).";
+                return;
+            }
+
+            _showForm = false;
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _formError = "Erro de conexão.";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task Delete(Guid id)
+    {
+        var confirm = await DialogService.ShowMessageBoxAsync(
+            "Excluir lição",
+            "Tem certeza que deseja excluir esta lição?",
+            yesText: "Excluir",
+            cancelText: "Cancelar");
+        if (confirm != true)
+            return;
+
+        try
+        {
+            await Http.DeleteAsync($"api/v1/admin/lessons/{id}");
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao excluir lição.";
+        }
+    }
+}

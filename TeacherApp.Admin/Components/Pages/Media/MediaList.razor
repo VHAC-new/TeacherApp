@@ -1,0 +1,302 @@
+@page "/media"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject HttpClient Http
+@inject IDialogService DialogService
+
+<PageTitle>Mídia — TeacherApp Admin</PageTitle>
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h4">Mídia</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => _showUpload = true)">Upload</MudButton>
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (_mediaFiles.Count == 0)
+{
+    <MudText Typo="Typo.body1" Color="Color.Secondary">Nenhum arquivo de mídia encontrado.</MudText>
+}
+else
+{
+    <MudTable Items="@_mediaFiles" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm" RowClassFunc="@RowClassFunc">
+        <HeaderContent>
+            <MudTh>Nome</MudTh>
+            <MudTh>Tipo</MudTh>
+            <MudTh>Tamanho</MudTh>
+            <MudTh>Upload em</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh Style="width: 120px;">Ações</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Nome">@context.FileName</MudTd>
+            <MudTd DataLabel="Tipo">@context.ContentType</MudTd>
+            <MudTd DataLabel="Tamanho">@FormatBytes(context.SizeBytes)</MudTd>
+            <MudTd DataLabel="Upload em">@context.UploadedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
+            <MudTd DataLabel="Status">
+                @if (context.UploadCompleted)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success">Completo</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">Pendente</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Ações">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => Delete(context.Id))">Excluir</MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+<MudDialog @bind-Visible="_showUpload" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Upload de Mídia</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.body2">Arquivo (áudio ou imagem)</MudText>
+            <InputFile OnChange="OnFileSelectedAsync"
+                       accept="audio/*,image/*"
+                       disabled="@_uploading"
+                       class="mt-1" />
+
+            @if (_uploadProgress is not null)
+            {
+                <MudStack Spacing="1">
+                    <MudProgressLinear Value="@(_uploadProgress.Value)" Color="@(_uploadError is not null ? Color.Error : Color.Primary)" Class="my-2" />
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@_uploadStatus</MudText>
+                </MudStack>
+            }
+
+            @if (!string.IsNullOrEmpty(_uploadError))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">@_uploadError</MudAlert>
+            }
+
+            @if (_uploadSuccess)
+            {
+                <MudAlert Severity="Severity.Success" Dense="true">Upload concluído com sucesso!</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="CloseUpload" Disabled="_uploading">Fechar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
+}
+
+@code {
+    private static readonly DialogOptions _dialogOptions = new()
+    {
+        CloseButton = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Small,
+        BackdropClick = false
+    };
+
+    private List<TeacherApp.Contracts.Media.MediaResponse> _mediaFiles = [];
+    private bool _loading = true;
+    private string? _error;
+
+    private bool _showUpload;
+    private bool _uploading;
+    private int? _uploadProgress;
+    private string? _uploadStatus;
+    private string? _uploadError;
+    private bool _uploadSuccess;
+
+    private static string RowClassFunc(TeacherApp.Contracts.Media.MediaResponse row, int _) =>
+        row.UploadCompleted ? string.Empty : "admin-media-row-pending";
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _mediaFiles = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Media.MediaResponse>>("api/v1/admin/media") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao carregar mídia.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private Task OnFileSelectedAsync(InputFileChangeEventArgs e) => ProcessFileAsync(e.File);
+
+    private async Task ProcessFileAsync(IBrowserFile file)
+    {
+        if (file.Size == 0)
+            return;
+
+        _uploading = true;
+        _uploadError = null;
+        _uploadSuccess = false;
+        _uploadProgress = 10;
+        _uploadStatus = "Solicitando URL de upload...";
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var initResponse = await Http.PostAsJsonAsync("api/v1/admin/media/upload-url",
+                new TeacherApp.Contracts.Media.InitMediaUploadRequest(file.Name, file.ContentType));
+
+            if (!initResponse.IsSuccessStatusCode)
+            {
+                var body = await initResponse.Content.ReadAsStringAsync();
+                if (body.Contains("S3 is not configured", StringComparison.OrdinalIgnoreCase))
+                {
+                    await UploadMultipartAsync(file);
+                    return;
+                }
+                _uploadError = $"Erro ao iniciar upload ({(int)initResponse.StatusCode}).";
+                return;
+            }
+
+            var initResult = await initResponse.Content.ReadFromJsonAsync<TeacherApp.Contracts.Media.InitMediaUploadResponse>();
+            if (initResult is null)
+            {
+                _uploadError = "Resposta inesperada do servidor.";
+                return;
+            }
+
+            _uploadProgress = 30;
+            _uploadStatus = "Enviando arquivo para S3...";
+            await InvokeAsync(StateHasChanged);
+
+            using var fileStream = file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+            using var memoryStream = new MemoryStream();
+            await fileStream.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            using var plainHttpClient = new HttpClient();
+            var putContent = new StreamContent(memoryStream);
+            putContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            var putResponse = await plainHttpClient.PutAsync(initResult.UploadUrl, putContent);
+
+            if (!putResponse.IsSuccessStatusCode)
+            {
+                _uploadError = $"Erro ao enviar para S3 ({(int)putResponse.StatusCode}).";
+                return;
+            }
+
+            _uploadProgress = 80;
+            _uploadStatus = "Confirmando upload...";
+            await InvokeAsync(StateHasChanged);
+
+            var completeResponse = await Http.PostAsync($"api/v1/admin/media/{initResult.MediaId}/complete", null);
+            if (!completeResponse.IsSuccessStatusCode)
+            {
+                _uploadError = $"Erro ao confirmar upload ({(int)completeResponse.StatusCode}).";
+                return;
+            }
+
+            _uploadProgress = 100;
+            _uploadStatus = "Concluído!";
+            _uploadSuccess = true;
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _uploadError = "Erro de conexão.";
+        }
+        catch (Exception ex)
+        {
+            _uploadError = $"Erro inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _uploading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task UploadMultipartAsync(IBrowserFile file)
+    {
+        _uploadProgress = 30;
+        _uploadStatus = "Enviando arquivo (modo local)...";
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var fileStream = file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+            var streamContent = new StreamContent(fileStream);
+            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            content.Add(streamContent, "file", file.Name);
+
+            var response = await Http.PostAsync("api/v1/admin/media", content);
+            if (!response.IsSuccessStatusCode)
+            {
+                _uploadError = $"Erro no upload ({(int)response.StatusCode}).";
+                return;
+            }
+
+            _uploadProgress = 100;
+            _uploadStatus = "Concluído!";
+            _uploadSuccess = true;
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _uploadError = "Erro de conexão.";
+        }
+        finally
+        {
+            _uploading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void CloseUpload()
+    {
+        _showUpload = false;
+        _uploadProgress = null;
+        _uploadStatus = null;
+        _uploadError = null;
+        _uploadSuccess = false;
+    }
+
+    private async Task Delete(Guid id)
+    {
+        var confirm = await DialogService.ShowMessageBoxAsync(
+            "Excluir mídia",
+            "Tem certeza que deseja excluir este ficheiro?",
+            yesText: "Excluir",
+            cancelText: "Cancelar");
+        if (confirm != true)
+            return;
+
+        try
+        {
+            await Http.DeleteAsync($"api/v1/admin/media/{id}");
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao excluir mídia.";
+        }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+}

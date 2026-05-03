@@ -161,6 +161,9 @@ namespace TeacherApp.Api.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AudioMediaId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -180,6 +183,8 @@ namespace TeacherApp.Api.Data.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AudioMediaId");
 
                     b.HasIndex("ModuleId", "Order")
                         .IsUnique();
@@ -337,6 +342,11 @@ namespace TeacherApp.Api.Data.Migrations
 
             modelBuilder.Entity("TeacherApp.Api.Domain.Lesson", b =>
                 {
+                    b.HasOne("TeacherApp.Api.Domain.MediaFile", null)
+                        .WithMany()
+                        .HasForeignKey("AudioMediaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("TeacherApp.Api.Domain.Module", "Module")
                         .WithMany()
                         .HasForeignKey("ModuleId")

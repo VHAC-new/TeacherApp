@@ -1,0 +1,283 @@
+@page "/final-exercises"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject HttpClient Http
+@inject IDialogService DialogService
+
+<PageTitle>Exercícios Finais — TeacherApp Admin</PageTitle>
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h4">Exercícios Finais</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenForm(null))" Disabled="@(_modules.Count == 0)">Novo Exercício Final</MudButton>
+</MudStack>
+
+<MudSelect T="Guid?"
+           Value="_filterModuleId"
+           ValueChanged="OnModuleFilterChangedAsync"
+           Label="Filtrar por módulo"
+           Clearable="true"
+           Class="mb-4"
+           Style="max-width: 320px;">
+    <MudSelectItem T="Guid?" Value="@null">Todos</MudSelectItem>
+    @foreach (var m in _modules)
+    {
+        <MudSelectItem T="Guid?" Value="@m.Id">@m.Title</MudSelectItem>
+    }
+</MudSelect>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (_exercises.Count == 0)
+{
+    <MudText Typo="Typo.body1" Color="Color.Secondary">Nenhum exercício final encontrado.</MudText>
+}
+else
+{
+    <MudTable Items="@_exercises.OrderBy(x => x.Order).ToList()" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
+        <HeaderContent>
+            <MudTh>Ordem</MudTh>
+            <MudTh>Pergunta</MudTh>
+            <MudTh>Resposta</MudTh>
+            <MudTh>Módulo</MudTh>
+            <MudTh Style="width: 200px;">Ações</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Ordem">@context.Order</MudTd>
+            <MudTd DataLabel="Pergunta">@Truncate(context.Prompt, 60)</MudTd>
+            <MudTd DataLabel="Resposta">@Truncate(context.ExpectedAnswer, 30)</MudTd>
+            <MudTd DataLabel="Módulo">@(_modules.FirstOrDefault(m => m.Id == context.ModuleId)?.Title ?? "—")</MudTd>
+            <MudTd DataLabel="Ações">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Class="mr-1" OnClick="@(() => OpenForm(context))">Editar</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => Delete(context.Id))">Excluir</MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+<MudDialog @bind-Visible="_showForm" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(_editing is null ? "Novo Exercício Final" : "Editar Exercício Final")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="_form" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <MudStack Spacing="3">
+                @if (_editing is null)
+                {
+                    <MudSelect T="string" @bind-Value="_form.ModuleId" Label="Módulo" Variant="Variant.Outlined">
+                        @foreach (var m in _modules)
+                        {
+                            <MudSelectItem T="string" Value="@m.Id.ToString()">@m.Title</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+                <MudTextField @bind-Value="_form.Prompt" For="@(() => _form.Prompt)" Label="Pergunta (Prompt)" Variant="Variant.Outlined" Lines="3" />
+                <MudTextField @bind-Value="_form.ExpectedAnswer" For="@(() => _form.ExpectedAnswer)" Label="Resposta esperada" Variant="Variant.Outlined" />
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="_form.Hint" Label="Dica" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudNumericField @bind-Value="_form.Order" Label="Ordem" Variant="Variant.Outlined" Min="0" />
+                    </MudItem>
+                </MudGrid>
+                <MudTextField @bind-Value="_form.Explanation" Label="Explicação" Variant="Variant.Outlined" Lines="2" />
+                <MudStack Row="true" Spacing="3" Wrap="Wrap.Wrap">
+                    <MudCheckBox @bind-Value="_form.IgnoreCase" Label="Ignorar maiúsculas/minúsculas" Color="Color.Primary" />
+                    <MudCheckBox @bind-Value="_form.IgnoreWhitespace" Label="Ignorar espaços" Color="Color.Primary" />
+                </MudStack>
+                @if (!string.IsNullOrEmpty(_formError))
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true">@_formError</MudAlert>
+                }
+                <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd">
+                    <MudButton Variant="Variant.Text" OnClick="CloseForm">Cancelar</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="_saving">
+                        @if (_saving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        }
+                        else
+                        {
+                            <span>Salvar</span>
+                        }
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </EditForm>
+    </DialogContent>
+</MudDialog>
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
+}
+
+@code {
+    private static readonly DialogOptions _dialogOptions = new()
+    {
+        CloseButton = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Large,
+        BackdropClick = true
+    };
+
+    private List<TeacherApp.Contracts.Modules.ModuleResponse> _modules = [];
+    private List<TeacherApp.Contracts.FinalExercises.FinalExerciseResponse> _exercises = [];
+    private bool _loading = true;
+    private string? _error;
+    private Guid? _filterModuleId;
+
+    private bool _showForm;
+    private bool _saving;
+    private string? _formError;
+    private TeacherApp.Contracts.FinalExercises.FinalExerciseResponse? _editing;
+    private FinalExerciseFormModel _form = new();
+
+    private sealed class FinalExerciseFormModel
+    {
+        public string ModuleId { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Pergunta obrigatória")]
+        public string Prompt { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Resposta obrigatória")]
+        public string ExpectedAnswer { get; set; } = "";
+
+        public string? Hint { get; set; }
+        public string? Explanation { get; set; }
+        public bool IgnoreCase { get; set; } = true;
+        public bool IgnoreWhitespace { get; set; } = true;
+        public int Order { get; set; } = 1;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _modules = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Modules.ModuleResponse>>("api/v1/admin/modules") ?? [];
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var query = _filterModuleId.HasValue ? $"?moduleId={_filterModuleId}" : "";
+            _exercises = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.FinalExercises.FinalExerciseResponse>>($"api/v1/admin/final-exercises{query}") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao carregar exercícios finais.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnModuleFilterChangedAsync(Guid? id)
+    {
+        _filterModuleId = id;
+        await LoadAsync();
+    }
+
+    private void OpenForm(TeacherApp.Contracts.FinalExercises.FinalExerciseResponse? exercise)
+    {
+        _editing = exercise;
+        _form = exercise is null
+            ? new FinalExerciseFormModel
+            {
+                ModuleId = (_filterModuleId ?? _modules.FirstOrDefault()?.Id ?? Guid.Empty).ToString(),
+                Order = _exercises.Count + 1
+            }
+            : new FinalExerciseFormModel
+            {
+                Prompt = exercise.Prompt,
+                ExpectedAnswer = exercise.ExpectedAnswer,
+                Hint = exercise.Hint,
+                Explanation = exercise.Explanation,
+                IgnoreCase = exercise.IgnoreCase,
+                IgnoreWhitespace = exercise.IgnoreWhitespace,
+                Order = exercise.Order,
+                ModuleId = exercise.ModuleId.ToString()
+            };
+        _formError = null;
+        _showForm = true;
+    }
+
+    private void CloseForm() => _showForm = false;
+
+    private async Task Save()
+    {
+        _saving = true;
+        _formError = null;
+        try
+        {
+            HttpResponseMessage response;
+            if (_editing is null)
+            {
+                if (!Guid.TryParse(_form.ModuleId, out var moduleId))
+                {
+                    _formError = "Selecione um módulo.";
+                    return;
+                }
+                response = await Http.PostAsJsonAsync("api/v1/admin/final-exercises",
+                    new TeacherApp.Contracts.FinalExercises.CreateFinalExerciseRequest(
+                        moduleId, _form.Prompt, _form.ExpectedAnswer, _form.Hint, _form.Explanation,
+                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order));
+            }
+            else
+            {
+                response = await Http.PutAsJsonAsync($"api/v1/admin/final-exercises/{_editing.Id}",
+                    new TeacherApp.Contracts.FinalExercises.UpdateFinalExerciseRequest(
+                        _form.Prompt, _form.ExpectedAnswer, _form.Hint, _form.Explanation,
+                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order));
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _formError = $"Erro ({(int)response.StatusCode}).";
+                return;
+            }
+
+            _showForm = false;
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _formError = "Erro de conexão.";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task Delete(Guid id)
+    {
+        var confirm = await DialogService.ShowMessageBoxAsync(
+            "Excluir exercício final",
+            "Tem certeza que deseja excluir este exercício final?",
+            yesText: "Excluir",
+            cancelText: "Cancelar");
+        if (confirm != true)
+            return;
+
+        try
+        {
+            await Http.DeleteAsync($"api/v1/admin/final-exercises/{id}");
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao excluir exercício final.";
+        }
+    }
+
+    private static string Truncate(string text, int maxLen) =>
+        text.Length <= maxLen ? text : text[..maxLen] + "...";
+}

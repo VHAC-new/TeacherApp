@@ -9,4 +9,5 @@ public interface IAdminMediaService
     Task<InitMediaUploadResponse> InitPresignedUploadAsync(InitMediaUploadRequest request, CancellationToken cancellationToken);
     Task<MediaResponse?> CompletePresignedUploadAsync(Guid id, CancellationToken cancellationToken);
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken);
+    Task<int> CleanupIncompleteAsync(TimeSpan olderThan, CancellationToken cancellationToken);
 }

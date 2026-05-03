@@ -9,4 +9,7 @@ public sealed class Lesson
     public string? Description { get; set; }
     public int Order { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>Optional lesson audio (uploaded media id). Presigned playback uses <c>GET /api/v1/media/{id}/playback-url</c>.</summary>
+    public Guid? AudioMediaId { get; set; }
 }

@@ -1,7 +1,90 @@
 ﻿@page "/"
+@attribute [Authorize]
+@rendermode InteractiveServer
 
-<PageTitle>Home</PageTitle>
+@inject HttpClient Http
 
-<h1>Hello, world!</h1>
+<PageTitle>Dashboard — TeacherApp Admin</PageTitle>
 
-Welcome to your new app.
+<MudText Typo="Typo.h4" Class="mb-4">Dashboard</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="my-4" />
+}
+else
+{
+    <MudGrid Spacing="4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Módulos</MudText>
+                    <MudText Typo="Typo.h3">@_moduleCount</MudText>
+                    <MudLink Href="/modules" Typo="Typo.body2">Gerenciar</MudLink>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Success">Lições</MudText>
+                    <MudText Typo="Typo.h3">@_lessonCount</MudText>
+                    <MudLink Href="/lessons" Typo="Typo.body2">Gerenciar</MudLink>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Warning">Exercícios</MudText>
+                    <MudText Typo="Typo.h3">@_exerciseCount</MudText>
+                    <MudLink Href="/exercises" Typo="Typo.body2">Gerenciar</MudLink>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Info">Mídia</MudText>
+                    <MudText Typo="Typo.h3">@_mediaCount</MudText>
+                    <MudLink Href="/media" Typo="Typo.body2">Gerenciar</MudLink>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+}
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
+}
+
+@code {
+    private int _moduleCount, _lessonCount, _exerciseCount, _mediaCount;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var modules = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Modules.ModuleResponse>>("api/v1/admin/modules");
+            var lessons = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Lessons.LessonResponse>>("api/v1/admin/lessons");
+            var exercises = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Exercises.ExerciseResponse>>("api/v1/admin/exercises");
+            var media = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Media.MediaResponse>>("api/v1/admin/media");
+
+            _moduleCount = modules?.Count ?? 0;
+            _lessonCount = lessons?.Count ?? 0;
+            _exerciseCount = exercises?.Count ?? 0;
+            _mediaCount = media?.Count ?? 0;
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Não foi possível conectar à API.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

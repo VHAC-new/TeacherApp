@@ -26,6 +26,12 @@ JWT emitido pela API; o projeto admin deve anexar o token nas chamadas à API (p
 
 ---
 
+## UI
+
+Componentes e **tema claro/escuro** do painel: biblioteca **MudBlazor** e diretrizes em [admin.md](admin.md) (secções *UI: MudBlazor* e *Suporte para tema Claro/Escuro*).
+
+---
+
 ## Ver também
 
-* [admin.md](admin.md) — funcionalidades e estrutura de pastas do painel
+* [admin.md](admin.md) — funcionalidades, MudBlazor, tema e estrutura de pastas do painel
