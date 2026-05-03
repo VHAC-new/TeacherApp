@@ -3,116 +3,106 @@
 @rendermode InteractiveServer
 
 @inject HttpClient Http
-@inject IJSRuntime JS
+@inject IDialogService DialogService
 
 <PageTitle>Mídia — TeacherApp Admin</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>Mídia</h1>
-    <button class="btn btn-primary" @onclick="() => _showUpload = true">Upload</button>
-</div>
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h4">Mídia</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => _showUpload = true)">Upload</MudButton>
+</MudStack>
 
 @if (_loading)
 {
-    <p class="text-muted">Carregando...</p>
+    <MudProgressLinear Indeterminate="true" />
 }
 else if (_mediaFiles.Count == 0)
 {
-    <p class="text-muted">Nenhum arquivo de mídia encontrado.</p>
+    <MudText Typo="Typo.body1" Color="Color.Secondary">Nenhum arquivo de mídia encontrado.</MudText>
 }
 else
 {
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>Tipo</th>
-                <th>Tamanho</th>
-                <th>Upload em</th>
-                <th>Status</th>
-                <th style="width: 120px;">Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var m in _mediaFiles)
+    <MudTable Items="@_mediaFiles" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm" RowClassFunc="@RowClassFunc">
+        <HeaderContent>
+            <MudTh>Nome</MudTh>
+            <MudTh>Tipo</MudTh>
+            <MudTh>Tamanho</MudTh>
+            <MudTh>Upload em</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh Style="width: 120px;">Ações</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Nome">@context.FileName</MudTd>
+            <MudTd DataLabel="Tipo">@context.ContentType</MudTd>
+            <MudTd DataLabel="Tamanho">@FormatBytes(context.SizeBytes)</MudTd>
+            <MudTd DataLabel="Upload em">@context.UploadedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
+            <MudTd DataLabel="Status">
+                @if (context.UploadCompleted)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success">Completo</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">Pendente</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Ações">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => Delete(context.Id))">Excluir</MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+<MudDialog @bind-Visible="_showUpload" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Upload de Mídia</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.body2">Arquivo (áudio ou imagem)</MudText>
+            <InputFile OnChange="OnFileSelectedAsync"
+                       accept="audio/*,image/*"
+                       disabled="@_uploading"
+                       class="mt-1" />
+
+            @if (_uploadProgress is not null)
             {
-                <tr class="@(m.UploadCompleted ? "" : "table-warning")">
-                    <td>@m.FileName</td>
-                    <td>@m.ContentType</td>
-                    <td>@FormatBytes(m.SizeBytes)</td>
-                    <td>@m.UploadedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                    <td>
-                        @if (m.UploadCompleted)
-                        {
-                            <span class="badge bg-success">Completo</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-warning text-dark">Pendente</span>
-                        }
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(m.Id)">Excluir</button>
-                    </td>
-                </tr>
+                <MudStack Spacing="1">
+                    <MudProgressLinear Value="@(_uploadProgress.Value)" Color="@(_uploadError is not null ? Color.Error : Color.Primary)" Class="my-2" />
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@_uploadStatus</MudText>
+                </MudStack>
             }
-        </tbody>
-    </table>
-}
 
-@if (_showUpload)
-{
-    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Upload de Mídia</h5>
-                    <button type="button" class="btn-close" @onclick="CloseUpload" disabled="@_uploading"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Arquivo (áudio ou imagem)</label>
-                        <InputFile OnChange="OnFileSelected" class="form-control"
-                                   accept="audio/*,image/*" disabled="@_uploading" />
-                    </div>
+            @if (!string.IsNullOrEmpty(_uploadError))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">@_uploadError</MudAlert>
+            }
 
-                    @if (_uploadProgress is not null)
-                    {
-                        <div class="mb-3">
-                            <div class="progress" style="height: 24px;">
-                                <div class="progress-bar @(_uploadError is not null ? "bg-danger" : "")"
-                                     style="width: @(_uploadProgress)%;">
-                                    @(_uploadProgress)%
-                                </div>
-                            </div>
-                            <small class="text-muted mt-1 d-block">@_uploadStatus</small>
-                        </div>
-                    }
-
-                    @if (!string.IsNullOrEmpty(_uploadError))
-                    {
-                        <div class="alert alert-danger py-2">@_uploadError</div>
-                    }
-
-                    @if (_uploadSuccess)
-                    {
-                        <div class="alert alert-success py-2">Upload concluído com sucesso!</div>
-                    }
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseUpload" disabled="@_uploading">Fechar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
+            @if (_uploadSuccess)
+            {
+                <MudAlert Severity="Severity.Success" Dense="true">Upload concluído com sucesso!</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="CloseUpload" Disabled="_uploading">Fechar</MudButton>
+    </DialogActions>
+</MudDialog>
 
 @if (!string.IsNullOrEmpty(_error))
 {
-    <div class="alert alert-danger mt-3">@_error</div>
+    <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
 }
 
 @code {
+    private static readonly DialogOptions _dialogOptions = new()
+    {
+        CloseButton = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Small,
+        BackdropClick = false
+    };
+
     private List<TeacherApp.Contracts.Media.MediaResponse> _mediaFiles = [];
     private bool _loading = true;
     private string? _error;
@@ -123,6 +113,9 @@ else
     private string? _uploadStatus;
     private string? _uploadError;
     private bool _uploadSuccess;
+
+    private static string RowClassFunc(TeacherApp.Contracts.Media.MediaResponse row, int _) =>
+        row.UploadCompleted ? string.Empty : "admin-media-row-pending";
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -144,17 +137,19 @@ else
         }
     }
 
-    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    private Task OnFileSelectedAsync(InputFileChangeEventArgs e) => ProcessFileAsync(e.File);
+
+    private async Task ProcessFileAsync(IBrowserFile file)
     {
-        var file = e.File;
-        if (file.Size == 0) return;
+        if (file.Size == 0)
+            return;
 
         _uploading = true;
         _uploadError = null;
         _uploadSuccess = false;
         _uploadProgress = 10;
         _uploadStatus = "Solicitando URL de upload...";
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
 
         try
         {
@@ -166,7 +161,7 @@ else
                 var body = await initResponse.Content.ReadAsStringAsync();
                 if (body.Contains("S3 is not configured", StringComparison.OrdinalIgnoreCase))
                 {
-                    await UploadMultipart(file);
+                    await UploadMultipartAsync(file);
                     return;
                 }
                 _uploadError = $"Erro ao iniciar upload ({(int)initResponse.StatusCode}).";
@@ -182,7 +177,7 @@ else
 
             _uploadProgress = 30;
             _uploadStatus = "Enviando arquivo para S3...";
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
 
             using var fileStream = file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
             using var memoryStream = new MemoryStream();
@@ -202,7 +197,7 @@ else
 
             _uploadProgress = 80;
             _uploadStatus = "Confirmando upload...";
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
 
             var completeResponse = await Http.PostAsync($"api/v1/admin/media/{initResult.MediaId}/complete", null);
             if (!completeResponse.IsSuccessStatusCode)
@@ -227,15 +222,15 @@ else
         finally
         {
             _uploading = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
     }
 
-    private async Task UploadMultipart(IBrowserFile file)
+    private async Task UploadMultipartAsync(IBrowserFile file)
     {
         _uploadProgress = 30;
         _uploadStatus = "Enviando arquivo (modo local)...";
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
 
         try
         {
@@ -264,7 +259,7 @@ else
         finally
         {
             _uploading = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -279,6 +274,14 @@ else
 
     private async Task Delete(Guid id)
     {
+        var confirm = await DialogService.ShowMessageBoxAsync(
+            "Excluir mídia",
+            "Tem certeza que deseja excluir este ficheiro?",
+            yesText: "Excluir",
+            cancelText: "Cancelar");
+        if (confirm != true)
+            return;
+
         try
         {
             await Http.DeleteAsync($"api/v1/admin/media/{id}");

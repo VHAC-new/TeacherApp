@@ -3,131 +3,123 @@
 @rendermode InteractiveServer
 
 @inject HttpClient Http
+@inject IDialogService DialogService
 
 <PageTitle>Lições — TeacherApp Admin</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>Lições</h1>
-    <button class="btn btn-primary" @onclick="() => OpenForm(null)" disabled="@(_modules.Count == 0)">Nova Lição</button>
-</div>
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h4">Lições</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenForm(null))" Disabled="@(_modules.Count == 0)">Nova Lição</MudButton>
+</MudStack>
 
-<div class="mb-3" style="max-width: 300px;">
-    <label class="form-label">Filtrar por módulo</label>
-    <select class="form-select" @onchange="OnModuleFilter">
-        <option value="">Todos</option>
-        @foreach (var m in _modules)
-        {
-            <option value="@m.Id">@m.Title</option>
-        }
-    </select>
-</div>
+<MudSelect T="Guid?"
+           Value="_filterModuleId"
+           ValueChanged="OnModuleFilterChangedAsync"
+           Label="Filtrar por módulo"
+           Clearable="true"
+           Class="mb-4"
+           Style="max-width: 320px;">
+    <MudSelectItem T="Guid?" Value="@null">Todos</MudSelectItem>
+    @foreach (var m in _modules)
+    {
+        <MudSelectItem T="Guid?" Value="@m.Id">@m.Title</MudSelectItem>
+    }
+</MudSelect>
 
 @if (_loading)
 {
-    <p class="text-muted">Carregando...</p>
+    <MudProgressLinear Indeterminate="true" />
 }
 else if (_lessons.Count == 0)
 {
-    <p class="text-muted">Nenhuma lição encontrada.</p>
+    <MudText Typo="Typo.body1" Color="Color.Secondary">Nenhuma lição encontrada.</MudText>
 }
 else
 {
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th>Ordem</th>
-                <th>Título</th>
-                <th>Módulo</th>
-                <th>Descrição</th>
-                <th>Áudio (Media)</th>
-                <th style="width: 200px;">Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var l in _lessons.OrderBy(x => x.Order))
-            {
-                <tr>
-                    <td>@l.Order</td>
-                    <td>@l.Title</td>
-                    <td>@(_modules.FirstOrDefault(m => m.Id == l.ModuleId)?.Title ?? "—")</td>
-                    <td>@(l.Description ?? "—")</td>
-                    <td><small>@(l.AudioMediaId?.ToString() ?? "—")</small></td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => OpenForm(l)">Editar</button>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(l.Id)">Excluir</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <MudTable Items="@_lessons.OrderBy(x => x.Order).ToList()" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
+        <HeaderContent>
+            <MudTh>Ordem</MudTh>
+            <MudTh>Título</MudTh>
+            <MudTh>Módulo</MudTh>
+            <MudTh>Descrição</MudTh>
+            <MudTh>Áudio (Media)</MudTh>
+            <MudTh Style="width: 200px;">Ações</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Ordem">@context.Order</MudTd>
+            <MudTd DataLabel="Título">@context.Title</MudTd>
+            <MudTd DataLabel="Módulo">@(_modules.FirstOrDefault(m => m.Id == context.ModuleId)?.Title ?? "—")</MudTd>
+            <MudTd DataLabel="Descrição">@(context.Description ?? "—")</MudTd>
+            <MudTd DataLabel="Áudio"><MudText Typo="Typo.caption">@(context.AudioMediaId?.ToString() ?? "—")</MudText></MudTd>
+            <MudTd DataLabel="Ações">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Class="mr-1" OnClick="@(() => OpenForm(context))">Editar</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => Delete(context.Id))">Excluir</MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
 }
 
-@if (_showForm)
-{
-    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@(_editing is null ? "Nova Lição" : "Editar Lição")</h5>
-                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
-                </div>
-                <EditForm Model="_form" OnValidSubmit="Save" FormName="lessonForm">
-                    <DataAnnotationsValidator />
-                    <div class="modal-body">
-                        @if (_editing is null)
+<MudDialog @bind-Visible="_showForm" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(_editing is null ? "Nova Lição" : "Editar Lição")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="_form" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <MudStack Spacing="3">
+                @if (_editing is null)
+                {
+                    <MudSelect T="string" @bind-Value="_form.ModuleId" Label="Módulo" Variant="Variant.Outlined" Required="true">
+                        @foreach (var m in _modules)
                         {
-                            <div class="mb-3">
-                                <label class="form-label">Módulo</label>
-                                <InputSelect class="form-select" @bind-Value="_form.ModuleId">
-                                    @foreach (var m in _modules)
-                                    {
-                                        <option value="@m.Id">@m.Title</option>
-                                    }
-                                </InputSelect>
-                            </div>
+                            <MudSelectItem T="string" Value="@m.Id.ToString()">@m.Title</MudSelectItem>
                         }
-                        <div class="mb-3">
-                            <label class="form-label">Título</label>
-                            <InputText class="form-control" @bind-Value="_form.Title" />
-                            <ValidationMessage For="() => _form.Title" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Descrição</label>
-                            <InputTextArea class="form-control" @bind-Value="_form.Description" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Ordem</label>
-                            <InputNumber class="form-control" @bind-Value="_form.Order" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">ID da média de áudio (opcional)</label>
-                            <InputText class="form-control" @bind-Value="_form.AudioMediaId" placeholder="Guid do ficheiro em Média (audio/*)" />
-                            <div class="form-text">Deixe vazio se a lição não tiver áudio. Use um ficheiro já carregado na página Média.</div>
-                        </div>
-                        @if (!string.IsNullOrEmpty(_formError))
+                    </MudSelect>
+                }
+                <MudTextField @bind-Value="_form.Title" For="@(() => _form.Title)" Label="Título" Variant="Variant.Outlined" />
+                <MudTextField @bind-Value="_form.Description" Label="Descrição" Variant="Variant.Outlined" Lines="3" />
+                <MudNumericField @bind-Value="_form.Order" Label="Ordem" Variant="Variant.Outlined" Min="0" />
+                <MudTextField @bind-Value="_form.AudioMediaId"
+                              Label="ID da média de áudio (opcional)"
+                              Variant="Variant.Outlined"
+                              Placeholder="Guid do ficheiro em Média (audio/*)" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Deixe vazio se a lição não tiver áudio. Use um ficheiro já carregado na página Média.</MudText>
+                @if (!string.IsNullOrEmpty(_formError))
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true">@_formError</MudAlert>
+                }
+                <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd">
+                    <MudButton Variant="Variant.Text" OnClick="CloseForm">Cancelar</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="_saving">
+                        @if (_saving)
                         {
-                            <div class="alert alert-danger py-2">@_formError</div>
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
                         }
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" disabled="@_saving">
-                            @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                            Salvar
-                        </button>
-                    </div>
-                </EditForm>
-            </div>
-        </div>
-    </div>
-}
+                        else
+                        {
+                            <span>Salvar</span>
+                        }
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </EditForm>
+    </DialogContent>
+</MudDialog>
 
 @if (!string.IsNullOrEmpty(_error))
 {
-    <div class="alert alert-danger mt-3">@_error</div>
+    <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
 }
 
 @code {
+    private static readonly DialogOptions _dialogOptions = new()
+    {
+        CloseButton = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Medium,
+        BackdropClick = true
+    };
+
     private List<TeacherApp.Contracts.Modules.ModuleResponse> _modules = [];
     private List<TeacherApp.Contracts.Lessons.LessonResponse> _lessons = [];
     private bool _loading = true;
@@ -177,9 +169,9 @@ else
         }
     }
 
-    private async Task OnModuleFilter(ChangeEventArgs e)
+    private async Task OnModuleFilterChangedAsync(Guid? id)
     {
-        _filterModuleId = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        _filterModuleId = id;
         await LoadAsync();
     }
 
@@ -262,6 +254,14 @@ else
 
     private async Task Delete(Guid id)
     {
+        var confirm = await DialogService.ShowMessageBoxAsync(
+            "Excluir lição",
+            "Tem certeza que deseja excluir esta lição?",
+            yesText: "Excluir",
+            cancelText: "Cancelar");
+        if (confirm != true)
+            return;
+
         try
         {
             await Http.DeleteAsync($"api/v1/admin/lessons/{id}");

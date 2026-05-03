@@ -6,57 +6,57 @@
 
 <PageTitle>Dashboard — TeacherApp Admin</PageTitle>
 
-<h1>Dashboard</h1>
+<MudText Typo="Typo.h4" Class="mb-4">Dashboard</MudText>
 
 @if (_loading)
 {
-    <p class="text-muted">Carregando...</p>
+    <MudProgressLinear Indeterminate="true" Class="my-4" />
 }
 else
 {
-    <div class="row g-4 mt-2">
-        <div class="col-md-3">
-            <div class="card text-bg-primary shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">Módulos</h5>
-                    <p class="display-6">@_moduleCount</p>
-                    <a href="modules" class="text-white-50 small">Gerenciar</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-bg-success shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">Lições</h5>
-                    <p class="display-6">@_lessonCount</p>
-                    <a href="lessons" class="text-white-50 small">Gerenciar</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-bg-warning shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">Exercícios</h5>
-                    <p class="display-6">@_exerciseCount</p>
-                    <a href="exercises" class="text-white-50 small">Gerenciar</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-bg-info shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">Mídia</h5>
-                    <p class="display-6">@_mediaCount</p>
-                    <a href="media" class="text-white-50 small">Gerenciar</a>
-                </div>
-            </div>
-        </div>
-    </div>
+    <MudGrid Spacing="4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Módulos</MudText>
+                    <MudText Typo="Typo.h3">@_moduleCount</MudText>
+                    <MudLink Href="/modules" Typo="Typo.body2">Gerenciar</MudLink>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Success">Lições</MudText>
+                    <MudText Typo="Typo.h3">@_lessonCount</MudText>
+                    <MudLink Href="/lessons" Typo="Typo.body2">Gerenciar</MudLink>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Warning">Exercícios</MudText>
+                    <MudText Typo="Typo.h3">@_exerciseCount</MudText>
+                    <MudLink Href="/exercises" Typo="Typo.body2">Gerenciar</MudLink>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Info">Mídia</MudText>
+                    <MudText Typo="Typo.h3">@_mediaCount</MudText>
+                    <MudLink Href="/media" Typo="Typo.body2">Gerenciar</MudLink>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
 }
 
 @if (!string.IsNullOrEmpty(_error))
 {
-    <div class="alert alert-danger mt-3">@_error</div>
+    <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
 }
 
 @code {

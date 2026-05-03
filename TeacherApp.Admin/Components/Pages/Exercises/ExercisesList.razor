@@ -3,149 +3,128 @@
 @rendermode InteractiveServer
 
 @inject HttpClient Http
+@inject IDialogService DialogService
 
 <PageTitle>Exercícios — TeacherApp Admin</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>Exercícios</h1>
-    <button class="btn btn-primary" @onclick="() => OpenForm(null)" disabled="@(_lessons.Count == 0)">Novo Exercício</button>
-</div>
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h4">Exercícios</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenForm(null))" Disabled="@(_lessons.Count == 0)">Novo Exercício</MudButton>
+</MudStack>
 
-<div class="mb-3" style="max-width: 300px;">
-    <label class="form-label">Filtrar por lição</label>
-    <select class="form-select" @onchange="OnLessonFilter">
-        <option value="">Todas</option>
-        @foreach (var l in _lessons)
-        {
-            <option value="@l.Id">@l.Title</option>
-        }
-    </select>
-</div>
+<MudSelect T="Guid?"
+           Value="_filterLessonId"
+           ValueChanged="OnLessonFilterChangedAsync"
+           Label="Filtrar por lição"
+           Clearable="true"
+           Class="mb-4"
+           Style="max-width: 320px;">
+    <MudSelectItem T="Guid?" Value="@null">Todas</MudSelectItem>
+    @foreach (var l in _lessons)
+    {
+        <MudSelectItem T="Guid?" Value="@l.Id">@l.Title</MudSelectItem>
+    }
+</MudSelect>
 
 @if (_loading)
 {
-    <p class="text-muted">Carregando...</p>
+    <MudProgressLinear Indeterminate="true" />
 }
 else if (_exercises.Count == 0)
 {
-    <p class="text-muted">Nenhum exercício encontrado.</p>
+    <MudText Typo="Typo.body1" Color="Color.Secondary">Nenhum exercício encontrado.</MudText>
 }
 else
 {
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th>Ordem</th>
-                <th>Pergunta</th>
-                <th>Resposta</th>
-                <th>Lição</th>
-                <th style="width: 200px;">Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var e in _exercises.OrderBy(x => x.Order))
-            {
-                <tr>
-                    <td>@e.Order</td>
-                    <td>@Truncate(e.Prompt, 60)</td>
-                    <td>@Truncate(e.ExpectedAnswer, 30)</td>
-                    <td>@(_lessons.FirstOrDefault(l => l.Id == e.LessonId)?.Title ?? "—")</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => OpenForm(e)">Editar</button>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(e.Id)">Excluir</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <MudTable Items="@_exercises.OrderBy(x => x.Order).ToList()" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
+        <HeaderContent>
+            <MudTh>Ordem</MudTh>
+            <MudTh>Pergunta</MudTh>
+            <MudTh>Resposta</MudTh>
+            <MudTh>Lição</MudTh>
+            <MudTh Style="width: 200px;">Ações</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Ordem">@context.Order</MudTd>
+            <MudTd DataLabel="Pergunta">@Truncate(context.Prompt, 60)</MudTd>
+            <MudTd DataLabel="Resposta">@Truncate(context.ExpectedAnswer, 30)</MudTd>
+            <MudTd DataLabel="Lição">@(_lessons.FirstOrDefault(l => l.Id == context.LessonId)?.Title ?? "—")</MudTd>
+            <MudTd DataLabel="Ações">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Class="mr-1" OnClick="@(() => OpenForm(context))">Editar</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => Delete(context.Id))">Excluir</MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
 }
 
-@if (_showForm)
-{
-    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.5);">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@(_editing is null ? "Novo Exercício" : "Editar Exercício")</h5>
-                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
-                </div>
-                <EditForm Model="_form" OnValidSubmit="Save" FormName="exerciseForm">
-                    <DataAnnotationsValidator />
-                    <div class="modal-body">
-                        @if (_editing is null)
+<MudDialog @bind-Visible="_showForm" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(_editing is null ? "Novo Exercício" : "Editar Exercício")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="_form" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <MudStack Spacing="3">
+                @if (_editing is null)
+                {
+                    <MudSelect T="string" @bind-Value="_form.LessonId" Label="Lição" Variant="Variant.Outlined">
+                        @foreach (var l in _lessons)
                         {
-                            <div class="mb-3">
-                                <label class="form-label">Lição</label>
-                                <InputSelect class="form-select" @bind-Value="_form.LessonId">
-                                    @foreach (var l in _lessons)
-                                    {
-                                        <option value="@l.Id">@l.Title</option>
-                                    }
-                                </InputSelect>
-                            </div>
+                            <MudSelectItem T="string" Value="@l.Id.ToString()">@l.Title</MudSelectItem>
                         }
-                        <div class="mb-3">
-                            <label class="form-label">Pergunta (Prompt)</label>
-                            <InputTextArea class="form-control" rows="3" @bind-Value="_form.Prompt" />
-                            <ValidationMessage For="() => _form.Prompt" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Resposta Esperada</label>
-                            <InputText class="form-control" @bind-Value="_form.ExpectedAnswer" />
-                            <ValidationMessage For="() => _form.ExpectedAnswer" />
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Dica</label>
-                                <InputText class="form-control" @bind-Value="_form.Hint" />
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Ordem</label>
-                                <InputNumber class="form-control" @bind-Value="_form.Order" />
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Explicação</label>
-                            <InputTextArea class="form-control" rows="2" @bind-Value="_form.Explanation" />
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-auto">
-                                <div class="form-check">
-                                    <InputCheckbox class="form-check-input" @bind-Value="_form.IgnoreCase" />
-                                    <label class="form-check-label">Ignorar maiúsculas/minúsculas</label>
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <div class="form-check">
-                                    <InputCheckbox class="form-check-input" @bind-Value="_form.IgnoreWhitespace" />
-                                    <label class="form-check-label">Ignorar espaços</label>
-                                </div>
-                            </div>
-                        </div>
-                        @if (!string.IsNullOrEmpty(_formError))
+                    </MudSelect>
+                }
+                <MudTextField @bind-Value="_form.Prompt" For="@(() => _form.Prompt)" Label="Pergunta (Prompt)" Variant="Variant.Outlined" Lines="3" />
+                <MudTextField @bind-Value="_form.ExpectedAnswer" For="@(() => _form.ExpectedAnswer)" Label="Resposta esperada" Variant="Variant.Outlined" />
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="_form.Hint" Label="Dica" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudNumericField @bind-Value="_form.Order" Label="Ordem" Variant="Variant.Outlined" Min="0" />
+                    </MudItem>
+                </MudGrid>
+                <MudTextField @bind-Value="_form.Explanation" Label="Explicação" Variant="Variant.Outlined" Lines="2" />
+                <MudStack Row="true" Spacing="3" Wrap="Wrap.Wrap">
+                    <MudCheckBox @bind-Value="_form.IgnoreCase" Label="Ignorar maiúsculas/minúsculas" Color="Color.Primary" />
+                    <MudCheckBox @bind-Value="_form.IgnoreWhitespace" Label="Ignorar espaços" Color="Color.Primary" />
+                </MudStack>
+                @if (!string.IsNullOrEmpty(_formError))
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true">@_formError</MudAlert>
+                }
+                <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd">
+                    <MudButton Variant="Variant.Text" OnClick="CloseForm">Cancelar</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="_saving">
+                        @if (_saving)
                         {
-                            <div class="alert alert-danger py-2">@_formError</div>
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
                         }
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" disabled="@_saving">
-                            @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                            Salvar
-                        </button>
-                    </div>
-                </EditForm>
-            </div>
-        </div>
-    </div>
-}
+                        else
+                        {
+                            <span>Salvar</span>
+                        }
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </EditForm>
+    </DialogContent>
+</MudDialog>
 
 @if (!string.IsNullOrEmpty(_error))
 {
-    <div class="alert alert-danger mt-3">@_error</div>
+    <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
 }
 
 @code {
+    private static readonly DialogOptions _dialogOptions = new()
+    {
+        CloseButton = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Large,
+        BackdropClick = true
+    };
+
     private List<TeacherApp.Contracts.Lessons.LessonResponse> _lessons = [];
     private List<TeacherApp.Contracts.Exercises.ExerciseResponse> _exercises = [];
     private bool _loading = true;
@@ -200,9 +179,9 @@ else
         }
     }
 
-    private async Task OnLessonFilter(ChangeEventArgs e)
+    private async Task OnLessonFilterChangedAsync(Guid? id)
     {
-        _filterLessonId = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        _filterLessonId = id;
         await LoadAsync();
     }
 
@@ -280,6 +259,14 @@ else
 
     private async Task Delete(Guid id)
     {
+        var confirm = await DialogService.ShowMessageBoxAsync(
+            "Excluir exercício",
+            "Tem certeza que deseja excluir este exercício?",
+            yesText: "Excluir",
+            cancelText: "Cancelar");
+        if (confirm != true)
+            return;
+
         try
         {
             await Http.DeleteAsync($"api/v1/admin/exercises/{id}");

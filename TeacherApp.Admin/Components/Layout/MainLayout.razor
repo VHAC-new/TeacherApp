@@ -1,28 +1,53 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
 @inject TokenStorageService TokenStorage
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
+@inject AdminThemeState ThemeState
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4">
-            <AuthorizeView>
-                <Authorized>
-                    <span class="me-3 text-muted small">@TokenStorage.Email</span>
-                    <button class="btn btn-outline-secondary btn-sm" @onclick="Logout">Sair</button>
-                </Authorized>
-            </AuthorizeView>
-        </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudHidden Breakpoint="Breakpoint.MdAndUp">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                           Color="Color.Inherit"
+                           OnClick="@ToggleDrawer" />
+        </MudHidden>
+        <MudText Typo="Typo.h6" Class="ms-2">TeacherApp Admin</MudText>
+        <MudSpacer />
+        <AuthorizeView>
+            <Authorized>
+                <MudText Typo="Typo.body2"
+                         Class="mr-3"
+                         Style="max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    @TokenStorage.Email
+                </MudText>
+                <MudTooltip Text="@(ThemeState.IsDarkMode ? "Tema claro" : "Tema escuro")">
+                    <MudIconButton Icon="@(ThemeState.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                                   Color="Color.Inherit"
+                                   OnClick="ToggleThemeAsync" />
+                </MudTooltip>
+                <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Class="ml-2" OnClick="Logout">Sair</MudButton>
+            </Authorized>
+        </AuthorizeView>
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen"
+               ClipMode="DrawerClipMode.Always"
+               Elevation="2"
+               Variant="DrawerVariant.Responsive"
+               Breakpoint="Breakpoint.Md">
+        <MudNavMenu>
+            <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+            <MudNavLink Href="/modules" Icon="@Icons.Material.Filled.ViewModule">Módulos</MudNavLink>
+            <MudNavLink Href="/lessons" Icon="@Icons.Material.Filled.MenuBook">Lições</MudNavLink>
+            <MudNavLink Href="/exercises" Icon="@Icons.Material.Filled.Quiz">Exercícios</MudNavLink>
+            <MudNavLink Href="/final-exercises" Icon="@Icons.Material.Filled.Assignment">Exercícios Finais</MudNavLink>
+            <MudNavLink Href="/media" Icon="@Icons.Material.Filled.PermMedia">Mídia</MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+    <MudMainContent Class="pt-4 px-4 px-md-8 pb-8">
+        @Body
+    </MudMainContent>
+</MudLayout>
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
@@ -31,10 +56,28 @@
 </div>
 
 @code {
+    private bool _drawerOpen = true;
+
+    protected override void OnInitialized()
+    {
+        ThemeState.ChangedAsync += OnThemeStateChangedAsync;
+    }
+
+    private Task OnThemeStateChangedAsync() => InvokeAsync(StateHasChanged);
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private async Task ToggleThemeAsync() => await ThemeState.ToggleAsync();
+
     private void Logout()
     {
         TokenStorage.Clear();
         ((TeacherApp.Admin.Auth.JwtAuthenticationStateProvider)AuthStateProvider).NotifyAuthStateChanged();
         Navigation.NavigateTo("/login", forceLoad: false);
+    }
+
+    public void Dispose()
+    {
+        ThemeState.ChangedAsync -= OnThemeStateChangedAsync;
     }
 }

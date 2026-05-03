@@ -3,99 +3,91 @@
 @rendermode InteractiveServer
 
 @inject HttpClient Http
+@inject IDialogService DialogService
 
 <PageTitle>Módulos — TeacherApp Admin</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>Módulos</h1>
-    <button class="btn btn-primary" @onclick="() => OpenForm(null)">Novo Módulo</button>
-</div>
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h4">Módulos</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenForm(null))">Novo Módulo</MudButton>
+</MudStack>
 
 @if (_loading)
 {
-    <p class="text-muted">Carregando...</p>
+    <MudProgressLinear Indeterminate="true" />
 }
 else if (_modules.Count == 0)
 {
-    <p class="text-muted">Nenhum módulo cadastrado.</p>
+    <MudText Typo="Typo.body1" Color="Color.Secondary">Nenhum módulo cadastrado.</MudText>
 }
 else
 {
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th>Ordem</th>
-                <th>Título</th>
-                <th>Descrição</th>
-                <th style="width: 200px;">Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var m in _modules.OrderBy(x => x.Order))
-            {
-                <tr>
-                    <td>@m.Order</td>
-                    <td>@m.Title</td>
-                    <td>@(m.Description ?? "—")</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => OpenForm(m)">Editar</button>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(m.Id)">Excluir</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <MudTable Items="@_modules.OrderBy(x => x.Order).ToList()" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
+        <HeaderContent>
+            <MudTh>Ordem</MudTh>
+            <MudTh>Título</MudTh>
+            <MudTh>Descrição</MudTh>
+            <MudTh Style="width: 200px;">Ações</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Ordem">@context.Order</MudTd>
+            <MudTd DataLabel="Título">@context.Title</MudTd>
+            <MudTd DataLabel="Descrição">@(context.Description ?? "—")</MudTd>
+            <MudTd DataLabel="Ações">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Class="mr-1" OnClick="@(() => OpenForm(context))">Editar</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => Delete(context.Id))">Excluir</MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
 }
 
-@if (_showForm)
-{
-    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@(_editing is null ? "Novo Módulo" : "Editar Módulo")</h5>
-                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
-                </div>
-                <EditForm Model="_form" OnValidSubmit="Save" FormName="moduleForm">
-                    <DataAnnotationsValidator />
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Título</label>
-                            <InputText class="form-control" @bind-Value="_form.Title" />
-                            <ValidationMessage For="() => _form.Title" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Descrição</label>
-                            <InputTextArea class="form-control" @bind-Value="_form.Description" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Ordem</label>
-                            <InputNumber class="form-control" @bind-Value="_form.Order" />
-                        </div>
-                        @if (!string.IsNullOrEmpty(_formError))
+<MudDialog @bind-Visible="_showForm" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(_editing is null ? "Novo Módulo" : "Editar Módulo")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="_form" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <MudStack Spacing="3">
+                <MudTextField @bind-Value="_form.Title" For="@(() => _form.Title)" Label="Título" Variant="Variant.Outlined" />
+                <MudTextField @bind-Value="_form.Description" Label="Descrição" Variant="Variant.Outlined" Lines="3" />
+                <MudNumericField @bind-Value="_form.Order" Label="Ordem" Variant="Variant.Outlined" Min="0" />
+                @if (!string.IsNullOrEmpty(_formError))
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true">@_formError</MudAlert>
+                }
+                <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd">
+                    <MudButton Variant="Variant.Text" OnClick="CloseForm">Cancelar</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="_saving">
+                        @if (_saving)
                         {
-                            <div class="alert alert-danger py-2">@_formError</div>
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
                         }
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" disabled="@_saving">
-                            @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                            Salvar
-                        </button>
-                    </div>
-                </EditForm>
-            </div>
-        </div>
-    </div>
-}
+                        else
+                        {
+                            <span>Salvar</span>
+                        }
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </EditForm>
+    </DialogContent>
+</MudDialog>
 
 @if (!string.IsNullOrEmpty(_error))
 {
-    <div class="alert alert-danger mt-3">@_error</div>
+    <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
 }
 
 @code {
+    private static readonly DialogOptions _dialogOptions = new()
+    {
+        CloseButton = true,
+        FullWidth = true,
+        MaxWidth = MaxWidth.Small,
+        BackdropClick = true
+    };
+
     private List<TeacherApp.Contracts.Modules.ModuleResponse> _modules = [];
     private bool _loading = true;
     private string? _error;
@@ -185,6 +177,14 @@ else
 
     private async Task Delete(Guid id)
     {
+        var confirm = await DialogService.ShowMessageBoxAsync(
+            "Excluir módulo",
+            "Tem certeza que deseja excluir este módulo?",
+            yesText: "Excluir",
+            cancelText: "Cancelar");
+        if (confirm != true)
+            return;
+
         try
         {
             await Http.DeleteAsync($"api/v1/admin/modules/{id}");
