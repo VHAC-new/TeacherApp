@@ -1,0 +1,296 @@
+@page "/final-exercises"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject HttpClient Http
+
+<PageTitle>Exercícios Finais — TeacherApp Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Exercícios Finais</h1>
+    <button class="btn btn-primary" @onclick="() => OpenForm(null)" disabled="@(_modules.Count == 0)">Novo Exercício Final</button>
+</div>
+
+<div class="mb-3" style="max-width: 300px;">
+    <label class="form-label">Filtrar por módulo</label>
+    <select class="form-select" @onchange="OnModuleFilter">
+        <option value="">Todos</option>
+        @foreach (var m in _modules)
+        {
+            <option value="@m.Id">@m.Title</option>
+        }
+    </select>
+</div>
+
+@if (_loading)
+{
+    <p class="text-muted">Carregando...</p>
+}
+else if (_exercises.Count == 0)
+{
+    <p class="text-muted">Nenhum exercício final encontrado.</p>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Ordem</th>
+                <th>Pergunta</th>
+                <th>Resposta</th>
+                <th>Módulo</th>
+                <th style="width: 200px;">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var e in _exercises.OrderBy(x => x.Order))
+            {
+                <tr>
+                    <td>@e.Order</td>
+                    <td>@Truncate(e.Prompt, 60)</td>
+                    <td>@Truncate(e.ExpectedAnswer, 30)</td>
+                    <td>@(_modules.FirstOrDefault(m => m.Id == e.ModuleId)?.Title ?? "—")</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => OpenForm(e)">Editar</button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(e.Id)">Excluir</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (_showForm)
+{
+    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editing is null ? "Novo Exercício Final" : "Editar Exercício Final")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
+                </div>
+                <EditForm Model="_form" OnValidSubmit="Save" FormName="finalExerciseForm">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        @if (_editing is null)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Módulo</label>
+                                <InputSelect class="form-select" @bind-Value="_form.ModuleId">
+                                    @foreach (var m in _modules)
+                                    {
+                                        <option value="@m.Id">@m.Title</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        }
+                        <div class="mb-3">
+                            <label class="form-label">Pergunta (Prompt)</label>
+                            <InputTextArea class="form-control" rows="3" @bind-Value="_form.Prompt" />
+                            <ValidationMessage For="() => _form.Prompt" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Resposta Esperada</label>
+                            <InputText class="form-control" @bind-Value="_form.ExpectedAnswer" />
+                            <ValidationMessage For="() => _form.ExpectedAnswer" />
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Dica</label>
+                                <InputText class="form-control" @bind-Value="_form.Hint" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ordem</label>
+                                <InputNumber class="form-control" @bind-Value="_form.Order" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Explicação</label>
+                            <InputTextArea class="form-control" rows="2" @bind-Value="_form.Explanation" />
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-auto">
+                                <div class="form-check">
+                                    <InputCheckbox class="form-check-input" @bind-Value="_form.IgnoreCase" />
+                                    <label class="form-check-label">Ignorar maiúsculas/minúsculas</label>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <div class="form-check">
+                                    <InputCheckbox class="form-check-input" @bind-Value="_form.IgnoreWhitespace" />
+                                    <label class="form-check-label">Ignorar espaços</label>
+                                </div>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(_formError))
+                        {
+                            <div class="alert alert-danger py-2">@_formError</div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            Salvar
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="alert alert-danger mt-3">@_error</div>
+}
+
+@code {
+    private List<TeacherApp.Contracts.Modules.ModuleResponse> _modules = [];
+    private List<TeacherApp.Contracts.FinalExercises.FinalExerciseResponse> _exercises = [];
+    private bool _loading = true;
+    private string? _error;
+    private Guid? _filterModuleId;
+
+    private bool _showForm;
+    private bool _saving;
+    private string? _formError;
+    private TeacherApp.Contracts.FinalExercises.FinalExerciseResponse? _editing;
+    private FinalExerciseFormModel _form = new();
+
+    private sealed class FinalExerciseFormModel
+    {
+        public string ModuleId { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Pergunta obrigatória")]
+        public string Prompt { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Resposta obrigatória")]
+        public string ExpectedAnswer { get; set; } = "";
+
+        public string? Hint { get; set; }
+        public string? Explanation { get; set; }
+        public bool IgnoreCase { get; set; } = true;
+        public bool IgnoreWhitespace { get; set; } = true;
+        public int Order { get; set; } = 1;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _modules = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Modules.ModuleResponse>>("api/v1/admin/modules") ?? [];
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var query = _filterModuleId.HasValue ? $"?moduleId={_filterModuleId}" : "";
+            _exercises = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.FinalExercises.FinalExerciseResponse>>($"api/v1/admin/final-exercises{query}") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao carregar exercícios finais.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnModuleFilter(ChangeEventArgs e)
+    {
+        _filterModuleId = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        await LoadAsync();
+    }
+
+    private void OpenForm(TeacherApp.Contracts.FinalExercises.FinalExerciseResponse? exercise)
+    {
+        _editing = exercise;
+        _form = exercise is null
+            ? new FinalExerciseFormModel
+            {
+                ModuleId = (_filterModuleId ?? _modules.FirstOrDefault()?.Id ?? Guid.Empty).ToString(),
+                Order = _exercises.Count + 1
+            }
+            : new FinalExerciseFormModel
+            {
+                Prompt = exercise.Prompt,
+                ExpectedAnswer = exercise.ExpectedAnswer,
+                Hint = exercise.Hint,
+                Explanation = exercise.Explanation,
+                IgnoreCase = exercise.IgnoreCase,
+                IgnoreWhitespace = exercise.IgnoreWhitespace,
+                Order = exercise.Order,
+                ModuleId = exercise.ModuleId.ToString()
+            };
+        _formError = null;
+        _showForm = true;
+    }
+
+    private void CloseForm() => _showForm = false;
+
+    private async Task Save()
+    {
+        _saving = true;
+        _formError = null;
+        try
+        {
+            HttpResponseMessage response;
+            if (_editing is null)
+            {
+                if (!Guid.TryParse(_form.ModuleId, out var moduleId))
+                {
+                    _formError = "Selecione um módulo.";
+                    return;
+                }
+                response = await Http.PostAsJsonAsync("api/v1/admin/final-exercises",
+                    new TeacherApp.Contracts.FinalExercises.CreateFinalExerciseRequest(
+                        moduleId, _form.Prompt, _form.ExpectedAnswer, _form.Hint, _form.Explanation,
+                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order));
+            }
+            else
+            {
+                response = await Http.PutAsJsonAsync($"api/v1/admin/final-exercises/{_editing.Id}",
+                    new TeacherApp.Contracts.FinalExercises.UpdateFinalExerciseRequest(
+                        _form.Prompt, _form.ExpectedAnswer, _form.Hint, _form.Explanation,
+                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order));
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _formError = $"Erro ({(int)response.StatusCode}).";
+                return;
+            }
+
+            _showForm = false;
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _formError = "Erro de conexão.";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task Delete(Guid id)
+    {
+        try
+        {
+            await Http.DeleteAsync($"api/v1/admin/final-exercises/{id}");
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao excluir exercício final.";
+        }
+    }
+
+    private static string Truncate(string text, int maxLen) =>
+        text.Length <= maxLen ? text : text[..maxLen] + "...";
+}

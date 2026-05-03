@@ -1,0 +1,109 @@
+@page "/login"
+@layout TeacherApp.Admin.Components.Layout.EmptyLayout
+@rendermode InteractiveServer
+
+@inject HttpClient Http
+@inject TokenStorageService TokenStorage
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Login — TeacherApp Admin</PageTitle>
+
+<div class="login-container d-flex align-items-center justify-content-center vh-100">
+    <div class="card shadow-lg border-0" style="min-width: 380px; max-width: 420px;">
+        <div class="card-body p-4">
+            <h4 class="card-title text-center mb-4">TeacherApp Admin</h4>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="alert alert-danger py-2">@_error</div>
+            }
+
+            <EditForm Model="_model" OnValidSubmit="HandleLogin" FormName="loginForm">
+                <DataAnnotationsValidator />
+
+                <div class="mb-3">
+                    <label class="form-label" for="email">E-mail</label>
+                    <InputText id="email" class="form-control" @bind-Value="_model.Email"
+                               placeholder="admin@teacherapp.com" />
+                    <ValidationMessage For="() => _model.Email" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="password">Senha</label>
+                    <InputText id="password" type="password" class="form-control" @bind-Value="_model.Password" />
+                    <ValidationMessage For="() => _model.Password" />
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100" disabled="@_loading">
+                    @if (_loading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    Entrar
+                </button>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel _model = new();
+    private string? _error;
+    private bool _loading;
+
+    private sealed class LoginModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "E-mail obrigatório")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "E-mail inválido")]
+        public string Email { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Senha obrigatória")]
+        public string Password { get; set; } = "";
+    }
+
+    private async Task HandleLogin()
+    {
+        _error = null;
+        _loading = true;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/v1/auth/login",
+                new TeacherApp.Contracts.Auth.LoginRequest(_model.Email, _model.Password));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _error = response.StatusCode == System.Net.HttpStatusCode.Unauthorized
+                    ? "Credenciais inválidas."
+                    : $"Erro ao fazer login ({(int)response.StatusCode}).";
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<TeacherApp.Contracts.Auth.LoginResponse>();
+            if (result is null)
+            {
+                _error = "Resposta inesperada do servidor.";
+                return;
+            }
+
+            if (!result.Roles.Contains("Admin"))
+            {
+                _error = "Acesso restrito a administradores.";
+                return;
+            }
+
+            TokenStorage.Store(result.AccessToken, result.Email, result.Roles, result.UserId);
+            ((TeacherApp.Admin.Auth.JwtAuthenticationStateProvider)AuthStateProvider).NotifyAuthStateChanged();
+            Navigation.NavigateTo("/", forceLoad: false);
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Não foi possível conectar à API. Verifique se o servidor está em execução.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

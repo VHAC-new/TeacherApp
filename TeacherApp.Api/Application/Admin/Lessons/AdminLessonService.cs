@@ -19,7 +19,7 @@ public sealed class AdminLessonService(AppDbContext db) : IAdminLessonService
         return await query
             .OrderBy(x => x.ModuleId)
             .ThenBy(x => x.Order)
-            .Select(x => new LessonResponse(x.Id, x.ModuleId, x.Title, x.Description, x.Order))
+            .Select(x => new LessonResponse(x.Id, x.ModuleId, x.Title, x.Description, x.Order, x.AudioMediaId))
             .ToListAsync(cancellationToken);
     }
 
@@ -28,13 +28,14 @@ public sealed class AdminLessonService(AppDbContext db) : IAdminLessonService
         return await db.Lessons
             .AsNoTracking()
             .Where(x => x.Id == id)
-            .Select(x => new LessonResponse(x.Id, x.ModuleId, x.Title, x.Description, x.Order))
+            .Select(x => new LessonResponse(x.Id, x.ModuleId, x.Title, x.Description, x.Order, x.AudioMediaId))
             .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<LessonResponse> CreateAsync(CreateLessonRequest request, CancellationToken cancellationToken)
     {
         Validate(request.Title, request.Description, request.Order);
+        await ValidateAudioMediaIdAsync(request.AudioMediaId, cancellationToken);
 
         var moduleExists = await db.Modules.AnyAsync(x => x.Id == request.ModuleId, cancellationToken);
         if (!moduleExists)
@@ -50,6 +51,7 @@ public sealed class AdminLessonService(AppDbContext db) : IAdminLessonService
             Description = request.Description?.Trim(),
             Order = request.Order,
             CreatedAt = DateTimeOffset.UtcNow,
+            AudioMediaId = request.AudioMediaId,
         };
 
         try
@@ -62,12 +64,13 @@ public sealed class AdminLessonService(AppDbContext db) : IAdminLessonService
             throw new InvalidOperationException("Order already exists for this module.");
         }
 
-        return new LessonResponse(entity.Id, entity.ModuleId, entity.Title, entity.Description, entity.Order);
+        return new LessonResponse(entity.Id, entity.ModuleId, entity.Title, entity.Description, entity.Order, entity.AudioMediaId);
     }
 
     public async Task<LessonResponse?> UpdateAsync(Guid id, UpdateLessonRequest request, CancellationToken cancellationToken)
     {
         Validate(request.Title, request.Description, request.Order);
+        await ValidateAudioMediaIdAsync(request.AudioMediaId, cancellationToken);
 
         var entity = await db.Lessons.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (entity is null)
@@ -78,6 +81,7 @@ public sealed class AdminLessonService(AppDbContext db) : IAdminLessonService
         entity.Title = request.Title.Trim();
         entity.Description = request.Description?.Trim();
         entity.Order = request.Order;
+        entity.AudioMediaId = request.AudioMediaId;
 
         try
         {
@@ -88,7 +92,7 @@ public sealed class AdminLessonService(AppDbContext db) : IAdminLessonService
             throw new InvalidOperationException("Order already exists for this module.");
         }
 
-        return new LessonResponse(entity.Id, entity.ModuleId, entity.Title, entity.Description, entity.Order);
+        return new LessonResponse(entity.Id, entity.ModuleId, entity.Title, entity.Description, entity.Order, entity.AudioMediaId);
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
@@ -124,6 +128,33 @@ public sealed class AdminLessonService(AppDbContext db) : IAdminLessonService
         if (order <= 0)
         {
             throw new ArgumentException("Order must be greater than 0.");
+        }
+    }
+
+    private async Task ValidateAudioMediaIdAsync(Guid? audioMediaId, CancellationToken cancellationToken)
+    {
+        if (audioMediaId is null)
+        {
+            return;
+        }
+
+        var media = await db.MediaFiles
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == audioMediaId.Value, cancellationToken);
+
+        if (media is null)
+        {
+            throw new ArgumentException("Audio media not found.");
+        }
+
+        if (!media.UploadCompleted)
+        {
+            throw new ArgumentException("Audio media upload is not complete.");
+        }
+
+        if (!media.ContentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Lesson audio must use an audio content type (e.g. audio/mpeg).");
         }
     }
 }

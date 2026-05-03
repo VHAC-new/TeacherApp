@@ -1,0 +1,198 @@
+@page "/modules"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject HttpClient Http
+
+<PageTitle>Módulos — TeacherApp Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Módulos</h1>
+    <button class="btn btn-primary" @onclick="() => OpenForm(null)">Novo Módulo</button>
+</div>
+
+@if (_loading)
+{
+    <p class="text-muted">Carregando...</p>
+}
+else if (_modules.Count == 0)
+{
+    <p class="text-muted">Nenhum módulo cadastrado.</p>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Ordem</th>
+                <th>Título</th>
+                <th>Descrição</th>
+                <th style="width: 200px;">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var m in _modules.OrderBy(x => x.Order))
+            {
+                <tr>
+                    <td>@m.Order</td>
+                    <td>@m.Title</td>
+                    <td>@(m.Description ?? "—")</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => OpenForm(m)">Editar</button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(m.Id)">Excluir</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (_showForm)
+{
+    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editing is null ? "Novo Módulo" : "Editar Módulo")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
+                </div>
+                <EditForm Model="_form" OnValidSubmit="Save" FormName="moduleForm">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Título</label>
+                            <InputText class="form-control" @bind-Value="_form.Title" />
+                            <ValidationMessage For="() => _form.Title" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descrição</label>
+                            <InputTextArea class="form-control" @bind-Value="_form.Description" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ordem</label>
+                            <InputNumber class="form-control" @bind-Value="_form.Order" />
+                        </div>
+                        @if (!string.IsNullOrEmpty(_formError))
+                        {
+                            <div class="alert alert-danger py-2">@_formError</div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            Salvar
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="alert alert-danger mt-3">@_error</div>
+}
+
+@code {
+    private List<TeacherApp.Contracts.Modules.ModuleResponse> _modules = [];
+    private bool _loading = true;
+    private string? _error;
+
+    private bool _showForm;
+    private bool _saving;
+    private string? _formError;
+    private TeacherApp.Contracts.Modules.ModuleResponse? _editing;
+    private ModuleFormModel _form = new();
+
+    private sealed class ModuleFormModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Título obrigatório")]
+        public string Title { get; set; } = "";
+        public string? Description { get; set; }
+        public int Order { get; set; } = 1;
+    }
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _modules = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Modules.ModuleResponse>>("api/v1/admin/modules") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao carregar módulos.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OpenForm(TeacherApp.Contracts.Modules.ModuleResponse? module)
+    {
+        _editing = module;
+        _form = module is null
+            ? new ModuleFormModel { Order = _modules.Count + 1 }
+            : new ModuleFormModel { Title = module.Title, Description = module.Description, Order = module.Order };
+        _formError = null;
+        _showForm = true;
+    }
+
+    private void CloseForm() => _showForm = false;
+
+    private async Task Save()
+    {
+        _saving = true;
+        _formError = null;
+        try
+        {
+            HttpResponseMessage response;
+            if (_editing is null)
+            {
+                response = await Http.PostAsJsonAsync("api/v1/admin/modules",
+                    new TeacherApp.Contracts.Modules.CreateModuleRequest(_form.Title, _form.Description, _form.Order));
+            }
+            else
+            {
+                response = await Http.PutAsJsonAsync($"api/v1/admin/modules/{_editing.Id}",
+                    new TeacherApp.Contracts.Modules.UpdateModuleRequest(_form.Title, _form.Description, _form.Order));
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _formError = $"Erro ({(int)response.StatusCode}).";
+                return;
+            }
+
+            _showForm = false;
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _formError = "Erro de conexão.";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task Delete(Guid id)
+    {
+        try
+        {
+            await Http.DeleteAsync($"api/v1/admin/modules/{id}");
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao excluir módulo.";
+        }
+    }
+}

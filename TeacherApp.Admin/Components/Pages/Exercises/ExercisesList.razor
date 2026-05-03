@@ -1,0 +1,296 @@
+@page "/exercises"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject HttpClient Http
+
+<PageTitle>Exercícios — TeacherApp Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Exercícios</h1>
+    <button class="btn btn-primary" @onclick="() => OpenForm(null)" disabled="@(_lessons.Count == 0)">Novo Exercício</button>
+</div>
+
+<div class="mb-3" style="max-width: 300px;">
+    <label class="form-label">Filtrar por lição</label>
+    <select class="form-select" @onchange="OnLessonFilter">
+        <option value="">Todas</option>
+        @foreach (var l in _lessons)
+        {
+            <option value="@l.Id">@l.Title</option>
+        }
+    </select>
+</div>
+
+@if (_loading)
+{
+    <p class="text-muted">Carregando...</p>
+}
+else if (_exercises.Count == 0)
+{
+    <p class="text-muted">Nenhum exercício encontrado.</p>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Ordem</th>
+                <th>Pergunta</th>
+                <th>Resposta</th>
+                <th>Lição</th>
+                <th style="width: 200px;">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var e in _exercises.OrderBy(x => x.Order))
+            {
+                <tr>
+                    <td>@e.Order</td>
+                    <td>@Truncate(e.Prompt, 60)</td>
+                    <td>@Truncate(e.ExpectedAnswer, 30)</td>
+                    <td>@(_lessons.FirstOrDefault(l => l.Id == e.LessonId)?.Title ?? "—")</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => OpenForm(e)">Editar</button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(e.Id)">Excluir</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (_showForm)
+{
+    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editing is null ? "Novo Exercício" : "Editar Exercício")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
+                </div>
+                <EditForm Model="_form" OnValidSubmit="Save" FormName="exerciseForm">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        @if (_editing is null)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Lição</label>
+                                <InputSelect class="form-select" @bind-Value="_form.LessonId">
+                                    @foreach (var l in _lessons)
+                                    {
+                                        <option value="@l.Id">@l.Title</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        }
+                        <div class="mb-3">
+                            <label class="form-label">Pergunta (Prompt)</label>
+                            <InputTextArea class="form-control" rows="3" @bind-Value="_form.Prompt" />
+                            <ValidationMessage For="() => _form.Prompt" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Resposta Esperada</label>
+                            <InputText class="form-control" @bind-Value="_form.ExpectedAnswer" />
+                            <ValidationMessage For="() => _form.ExpectedAnswer" />
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Dica</label>
+                                <InputText class="form-control" @bind-Value="_form.Hint" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ordem</label>
+                                <InputNumber class="form-control" @bind-Value="_form.Order" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Explicação</label>
+                            <InputTextArea class="form-control" rows="2" @bind-Value="_form.Explanation" />
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-auto">
+                                <div class="form-check">
+                                    <InputCheckbox class="form-check-input" @bind-Value="_form.IgnoreCase" />
+                                    <label class="form-check-label">Ignorar maiúsculas/minúsculas</label>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <div class="form-check">
+                                    <InputCheckbox class="form-check-input" @bind-Value="_form.IgnoreWhitespace" />
+                                    <label class="form-check-label">Ignorar espaços</label>
+                                </div>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(_formError))
+                        {
+                            <div class="alert alert-danger py-2">@_formError</div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            Salvar
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="alert alert-danger mt-3">@_error</div>
+}
+
+@code {
+    private List<TeacherApp.Contracts.Lessons.LessonResponse> _lessons = [];
+    private List<TeacherApp.Contracts.Exercises.ExerciseResponse> _exercises = [];
+    private bool _loading = true;
+    private string? _error;
+    private Guid? _filterLessonId;
+
+    private bool _showForm;
+    private bool _saving;
+    private string? _formError;
+    private TeacherApp.Contracts.Exercises.ExerciseResponse? _editing;
+    private ExerciseFormModel _form = new();
+
+    private sealed class ExerciseFormModel
+    {
+        public string LessonId { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Pergunta obrigatória")]
+        public string Prompt { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Resposta obrigatória")]
+        public string ExpectedAnswer { get; set; } = "";
+
+        public string? Hint { get; set; }
+        public string? Explanation { get; set; }
+        public bool IgnoreCase { get; set; } = true;
+        public bool IgnoreWhitespace { get; set; } = true;
+        public int Order { get; set; } = 1;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _lessons = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Lessons.LessonResponse>>("api/v1/admin/lessons") ?? [];
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var query = _filterLessonId.HasValue ? $"?lessonId={_filterLessonId}" : "";
+            _exercises = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Exercises.ExerciseResponse>>($"api/v1/admin/exercises{query}") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao carregar exercícios.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnLessonFilter(ChangeEventArgs e)
+    {
+        _filterLessonId = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        await LoadAsync();
+    }
+
+    private void OpenForm(TeacherApp.Contracts.Exercises.ExerciseResponse? exercise)
+    {
+        _editing = exercise;
+        _form = exercise is null
+            ? new ExerciseFormModel
+            {
+                LessonId = (_filterLessonId ?? _lessons.FirstOrDefault()?.Id ?? Guid.Empty).ToString(),
+                Order = _exercises.Count + 1
+            }
+            : new ExerciseFormModel
+            {
+                Prompt = exercise.Prompt,
+                ExpectedAnswer = exercise.ExpectedAnswer,
+                Hint = exercise.Hint,
+                Explanation = exercise.Explanation,
+                IgnoreCase = exercise.IgnoreCase,
+                IgnoreWhitespace = exercise.IgnoreWhitespace,
+                Order = exercise.Order,
+                LessonId = exercise.LessonId.ToString()
+            };
+        _formError = null;
+        _showForm = true;
+    }
+
+    private void CloseForm() => _showForm = false;
+
+    private async Task Save()
+    {
+        _saving = true;
+        _formError = null;
+        try
+        {
+            HttpResponseMessage response;
+            if (_editing is null)
+            {
+                if (!Guid.TryParse(_form.LessonId, out var lessonId))
+                {
+                    _formError = "Selecione uma lição.";
+                    return;
+                }
+                response = await Http.PostAsJsonAsync("api/v1/admin/exercises",
+                    new TeacherApp.Contracts.Exercises.CreateExerciseRequest(
+                        lessonId, _form.Prompt, _form.ExpectedAnswer, _form.Hint, _form.Explanation,
+                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order));
+            }
+            else
+            {
+                response = await Http.PutAsJsonAsync($"api/v1/admin/exercises/{_editing.Id}",
+                    new TeacherApp.Contracts.Exercises.UpdateExerciseRequest(
+                        _form.Prompt, _form.ExpectedAnswer, _form.Hint, _form.Explanation,
+                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order));
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _formError = $"Erro ({(int)response.StatusCode}).";
+                return;
+            }
+
+            _showForm = false;
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _formError = "Erro de conexão.";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task Delete(Guid id)
+    {
+        try
+        {
+            await Http.DeleteAsync($"api/v1/admin/exercises/{id}");
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao excluir exercício.";
+        }
+    }
+
+    private static string Truncate(string text, int maxLen) =>
+        text.Length <= maxLen ? text : text[..maxLen] + "...";
+}

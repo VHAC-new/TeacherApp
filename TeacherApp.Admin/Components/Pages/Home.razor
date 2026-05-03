@@ -1,7 +1,90 @@
 ﻿@page "/"
+@attribute [Authorize]
+@rendermode InteractiveServer
 
-<PageTitle>Home</PageTitle>
+@inject HttpClient Http
 
-<h1>Hello, world!</h1>
+<PageTitle>Dashboard — TeacherApp Admin</PageTitle>
 
-Welcome to your new app.
+<h1>Dashboard</h1>
+
+@if (_loading)
+{
+    <p class="text-muted">Carregando...</p>
+}
+else
+{
+    <div class="row g-4 mt-2">
+        <div class="col-md-3">
+            <div class="card text-bg-primary shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Módulos</h5>
+                    <p class="display-6">@_moduleCount</p>
+                    <a href="modules" class="text-white-50 small">Gerenciar</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-success shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Lições</h5>
+                    <p class="display-6">@_lessonCount</p>
+                    <a href="lessons" class="text-white-50 small">Gerenciar</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-warning shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Exercícios</h5>
+                    <p class="display-6">@_exerciseCount</p>
+                    <a href="exercises" class="text-white-50 small">Gerenciar</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-bg-info shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Mídia</h5>
+                    <p class="display-6">@_mediaCount</p>
+                    <a href="media" class="text-white-50 small">Gerenciar</a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="alert alert-danger mt-3">@_error</div>
+}
+
+@code {
+    private int _moduleCount, _lessonCount, _exerciseCount, _mediaCount;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var modules = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Modules.ModuleResponse>>("api/v1/admin/modules");
+            var lessons = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Lessons.LessonResponse>>("api/v1/admin/lessons");
+            var exercises = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Exercises.ExerciseResponse>>("api/v1/admin/exercises");
+            var media = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Media.MediaResponse>>("api/v1/admin/media");
+
+            _moduleCount = modules?.Count ?? 0;
+            _lessonCount = lessons?.Count ?? 0;
+            _exerciseCount = exercises?.Count ?? 0;
+            _mediaCount = media?.Count ?? 0;
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Não foi possível conectar à API.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

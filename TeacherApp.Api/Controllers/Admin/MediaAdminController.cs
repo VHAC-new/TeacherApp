@@ -51,13 +51,20 @@ public sealed class MediaAdminController(IAdminMediaService mediaService, IS3Med
             return BadRequest(new { error = "S3 is not configured." });
         }
 
-        var result = await mediaService.CompletePresignedUploadAsync(id, cancellationToken);
-        if (result is null)
+        try
         {
-            return NotFound(new { error = "Media not found, or object not present in S3 yet (retry after PUT completes)." });
-        }
+            var result = await mediaService.CompletePresignedUploadAsync(id, cancellationToken);
+            if (result is null)
+            {
+                return NotFound(new { error = "Media not found, or object not present in S3 yet (retry after PUT completes)." });
+            }
 
-        return Ok(result);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Failed to verify S3"))
+        {
+            return StatusCode(502, new { error = "Could not verify the uploaded object in S3. Check IAM permissions and bucket configuration.", detail = ex.Message });
+        }
     }
 
     [HttpPost]
@@ -96,5 +103,15 @@ public sealed class MediaAdminController(IAdminMediaService mediaService, IS3Med
     {
         var deleted = await mediaService.DeleteAsync(id, cancellationToken);
         return deleted ? NoContent() : NotFound();
+    }
+
+    [HttpPost("cleanup-incomplete")]
+    public async Task<IActionResult> CleanupIncomplete(
+        [FromQuery] int olderThanHours = 24, CancellationToken cancellationToken = default)
+    {
+        if (olderThanHours < 1) olderThanHours = 1;
+        var removed = await mediaService.CleanupIncompleteAsync(
+            TimeSpan.FromHours(olderThanHours), cancellationToken);
+        return Ok(new { removed });
     }
 }

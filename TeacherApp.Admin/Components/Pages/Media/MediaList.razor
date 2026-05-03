@@ -1,0 +1,299 @@
+@page "/media"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<PageTitle>Mídia — TeacherApp Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Mídia</h1>
+    <button class="btn btn-primary" @onclick="() => _showUpload = true">Upload</button>
+</div>
+
+@if (_loading)
+{
+    <p class="text-muted">Carregando...</p>
+}
+else if (_mediaFiles.Count == 0)
+{
+    <p class="text-muted">Nenhum arquivo de mídia encontrado.</p>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Tipo</th>
+                <th>Tamanho</th>
+                <th>Upload em</th>
+                <th>Status</th>
+                <th style="width: 120px;">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var m in _mediaFiles)
+            {
+                <tr class="@(m.UploadCompleted ? "" : "table-warning")">
+                    <td>@m.FileName</td>
+                    <td>@m.ContentType</td>
+                    <td>@FormatBytes(m.SizeBytes)</td>
+                    <td>@m.UploadedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>
+                        @if (m.UploadCompleted)
+                        {
+                            <span class="badge bg-success">Completo</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-warning text-dark">Pendente</span>
+                        }
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(m.Id)">Excluir</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (_showUpload)
+{
+    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Upload de Mídia</h5>
+                    <button type="button" class="btn-close" @onclick="CloseUpload" disabled="@_uploading"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Arquivo (áudio ou imagem)</label>
+                        <InputFile OnChange="OnFileSelected" class="form-control"
+                                   accept="audio/*,image/*" disabled="@_uploading" />
+                    </div>
+
+                    @if (_uploadProgress is not null)
+                    {
+                        <div class="mb-3">
+                            <div class="progress" style="height: 24px;">
+                                <div class="progress-bar @(_uploadError is not null ? "bg-danger" : "")"
+                                     style="width: @(_uploadProgress)%;">
+                                    @(_uploadProgress)%
+                                </div>
+                            </div>
+                            <small class="text-muted mt-1 d-block">@_uploadStatus</small>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_uploadError))
+                    {
+                        <div class="alert alert-danger py-2">@_uploadError</div>
+                    }
+
+                    @if (_uploadSuccess)
+                    {
+                        <div class="alert alert-success py-2">Upload concluído com sucesso!</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseUpload" disabled="@_uploading">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="alert alert-danger mt-3">@_error</div>
+}
+
+@code {
+    private List<TeacherApp.Contracts.Media.MediaResponse> _mediaFiles = [];
+    private bool _loading = true;
+    private string? _error;
+
+    private bool _showUpload;
+    private bool _uploading;
+    private int? _uploadProgress;
+    private string? _uploadStatus;
+    private string? _uploadError;
+    private bool _uploadSuccess;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _mediaFiles = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Media.MediaResponse>>("api/v1/admin/media") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao carregar mídia.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file.Size == 0) return;
+
+        _uploading = true;
+        _uploadError = null;
+        _uploadSuccess = false;
+        _uploadProgress = 10;
+        _uploadStatus = "Solicitando URL de upload...";
+        StateHasChanged();
+
+        try
+        {
+            var initResponse = await Http.PostAsJsonAsync("api/v1/admin/media/upload-url",
+                new TeacherApp.Contracts.Media.InitMediaUploadRequest(file.Name, file.ContentType));
+
+            if (!initResponse.IsSuccessStatusCode)
+            {
+                var body = await initResponse.Content.ReadAsStringAsync();
+                if (body.Contains("S3 is not configured", StringComparison.OrdinalIgnoreCase))
+                {
+                    await UploadMultipart(file);
+                    return;
+                }
+                _uploadError = $"Erro ao iniciar upload ({(int)initResponse.StatusCode}).";
+                return;
+            }
+
+            var initResult = await initResponse.Content.ReadFromJsonAsync<TeacherApp.Contracts.Media.InitMediaUploadResponse>();
+            if (initResult is null)
+            {
+                _uploadError = "Resposta inesperada do servidor.";
+                return;
+            }
+
+            _uploadProgress = 30;
+            _uploadStatus = "Enviando arquivo para S3...";
+            StateHasChanged();
+
+            using var fileStream = file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+            using var memoryStream = new MemoryStream();
+            await fileStream.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            using var plainHttpClient = new HttpClient();
+            var putContent = new StreamContent(memoryStream);
+            putContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            var putResponse = await plainHttpClient.PutAsync(initResult.UploadUrl, putContent);
+
+            if (!putResponse.IsSuccessStatusCode)
+            {
+                _uploadError = $"Erro ao enviar para S3 ({(int)putResponse.StatusCode}).";
+                return;
+            }
+
+            _uploadProgress = 80;
+            _uploadStatus = "Confirmando upload...";
+            StateHasChanged();
+
+            var completeResponse = await Http.PostAsync($"api/v1/admin/media/{initResult.MediaId}/complete", null);
+            if (!completeResponse.IsSuccessStatusCode)
+            {
+                _uploadError = $"Erro ao confirmar upload ({(int)completeResponse.StatusCode}).";
+                return;
+            }
+
+            _uploadProgress = 100;
+            _uploadStatus = "Concluído!";
+            _uploadSuccess = true;
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _uploadError = "Erro de conexão.";
+        }
+        catch (Exception ex)
+        {
+            _uploadError = $"Erro inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _uploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UploadMultipart(IBrowserFile file)
+    {
+        _uploadProgress = 30;
+        _uploadStatus = "Enviando arquivo (modo local)...";
+        StateHasChanged();
+
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var fileStream = file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+            var streamContent = new StreamContent(fileStream);
+            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            content.Add(streamContent, "file", file.Name);
+
+            var response = await Http.PostAsync("api/v1/admin/media", content);
+            if (!response.IsSuccessStatusCode)
+            {
+                _uploadError = $"Erro no upload ({(int)response.StatusCode}).";
+                return;
+            }
+
+            _uploadProgress = 100;
+            _uploadStatus = "Concluído!";
+            _uploadSuccess = true;
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _uploadError = "Erro de conexão.";
+        }
+        finally
+        {
+            _uploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseUpload()
+    {
+        _showUpload = false;
+        _uploadProgress = null;
+        _uploadStatus = null;
+        _uploadError = null;
+        _uploadSuccess = false;
+    }
+
+    private async Task Delete(Guid id)
+    {
+        try
+        {
+            await Http.DeleteAsync($"api/v1/admin/media/{id}");
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao excluir mídia.";
+        }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+}

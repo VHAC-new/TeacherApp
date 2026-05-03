@@ -1,4 +1,4 @@
-# 📌 App Mobile (MAUI)
+# 📌 App Mobile Android e IOS (MAUI)
 
 ## Arquitetura
 

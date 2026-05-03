@@ -32,5 +32,12 @@ public sealed class LessonMap : IEntityTypeConfiguration<Lesson>
             .WithMany()
             .HasForeignKey(x => x.ModuleId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(x => x.AudioMediaId);
+
+        builder.HasOne<MediaFile>()
+            .WithMany()
+            .HasForeignKey(x => x.AudioMediaId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

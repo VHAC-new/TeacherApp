@@ -1,0 +1,275 @@
+@page "/lessons"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject HttpClient Http
+
+<PageTitle>Lições — TeacherApp Admin</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Lições</h1>
+    <button class="btn btn-primary" @onclick="() => OpenForm(null)" disabled="@(_modules.Count == 0)">Nova Lição</button>
+</div>
+
+<div class="mb-3" style="max-width: 300px;">
+    <label class="form-label">Filtrar por módulo</label>
+    <select class="form-select" @onchange="OnModuleFilter">
+        <option value="">Todos</option>
+        @foreach (var m in _modules)
+        {
+            <option value="@m.Id">@m.Title</option>
+        }
+    </select>
+</div>
+
+@if (_loading)
+{
+    <p class="text-muted">Carregando...</p>
+}
+else if (_lessons.Count == 0)
+{
+    <p class="text-muted">Nenhuma lição encontrada.</p>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Ordem</th>
+                <th>Título</th>
+                <th>Módulo</th>
+                <th>Descrição</th>
+                <th>Áudio (Media)</th>
+                <th style="width: 200px;">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var l in _lessons.OrderBy(x => x.Order))
+            {
+                <tr>
+                    <td>@l.Order</td>
+                    <td>@l.Title</td>
+                    <td>@(_modules.FirstOrDefault(m => m.Id == l.ModuleId)?.Title ?? "—")</td>
+                    <td>@(l.Description ?? "—")</td>
+                    <td><small>@(l.AudioMediaId?.ToString() ?? "—")</small></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => OpenForm(l)">Editar</button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(l.Id)">Excluir</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (_showForm)
+{
+    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editing is null ? "Nova Lição" : "Editar Lição")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
+                </div>
+                <EditForm Model="_form" OnValidSubmit="Save" FormName="lessonForm">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        @if (_editing is null)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Módulo</label>
+                                <InputSelect class="form-select" @bind-Value="_form.ModuleId">
+                                    @foreach (var m in _modules)
+                                    {
+                                        <option value="@m.Id">@m.Title</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        }
+                        <div class="mb-3">
+                            <label class="form-label">Título</label>
+                            <InputText class="form-control" @bind-Value="_form.Title" />
+                            <ValidationMessage For="() => _form.Title" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descrição</label>
+                            <InputTextArea class="form-control" @bind-Value="_form.Description" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ordem</label>
+                            <InputNumber class="form-control" @bind-Value="_form.Order" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">ID da média de áudio (opcional)</label>
+                            <InputText class="form-control" @bind-Value="_form.AudioMediaId" placeholder="Guid do ficheiro em Média (audio/*)" />
+                            <div class="form-text">Deixe vazio se a lição não tiver áudio. Use um ficheiro já carregado na página Média.</div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(_formError))
+                        {
+                            <div class="alert alert-danger py-2">@_formError</div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            Salvar
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="alert alert-danger mt-3">@_error</div>
+}
+
+@code {
+    private List<TeacherApp.Contracts.Modules.ModuleResponse> _modules = [];
+    private List<TeacherApp.Contracts.Lessons.LessonResponse> _lessons = [];
+    private bool _loading = true;
+    private string? _error;
+    private Guid? _filterModuleId;
+
+    private bool _showForm;
+    private bool _saving;
+    private string? _formError;
+    private TeacherApp.Contracts.Lessons.LessonResponse? _editing;
+    private LessonFormModel _form = new();
+
+    private sealed class LessonFormModel
+    {
+        public string ModuleId { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Título obrigatório")]
+        public string Title { get; set; } = "";
+        public string? Description { get; set; }
+        public int Order { get; set; } = 1;
+
+        public string? AudioMediaId { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _modules = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Modules.ModuleResponse>>("api/v1/admin/modules") ?? [];
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var query = _filterModuleId.HasValue ? $"?moduleId={_filterModuleId}" : "";
+            _lessons = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Lessons.LessonResponse>>($"api/v1/admin/lessons{query}") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao carregar lições.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnModuleFilter(ChangeEventArgs e)
+    {
+        _filterModuleId = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        await LoadAsync();
+    }
+
+    private void OpenForm(TeacherApp.Contracts.Lessons.LessonResponse? lesson)
+    {
+        _editing = lesson;
+        _form = lesson is null
+            ? new LessonFormModel
+            {
+                ModuleId = (_filterModuleId ?? _modules.FirstOrDefault()?.Id ?? Guid.Empty).ToString(),
+                Order = _lessons.Count + 1
+            }
+            : new LessonFormModel
+            {
+                Title = lesson.Title,
+                Description = lesson.Description,
+                Order = lesson.Order,
+                ModuleId = lesson.ModuleId.ToString(),
+                AudioMediaId = lesson.AudioMediaId?.ToString()
+            };
+        _formError = null;
+        _showForm = true;
+    }
+
+    private void CloseForm() => _showForm = false;
+
+    private async Task Save()
+    {
+        _saving = true;
+        _formError = null;
+        try
+        {
+            Guid? audioId = null;
+            if (!string.IsNullOrWhiteSpace(_form.AudioMediaId))
+            {
+                if (!Guid.TryParse(_form.AudioMediaId.Trim(), out var parsed))
+                {
+                    _formError = "ID da média de áudio inválido (deve ser um GUID).";
+                    return;
+                }
+
+                audioId = parsed;
+            }
+
+            HttpResponseMessage response;
+            if (_editing is null)
+            {
+                if (!Guid.TryParse(_form.ModuleId, out var moduleId))
+                {
+                    _formError = "Selecione um módulo.";
+                    return;
+                }
+                response = await Http.PostAsJsonAsync("api/v1/admin/lessons",
+                    new TeacherApp.Contracts.Lessons.CreateLessonRequest(moduleId, _form.Title, _form.Description, _form.Order, audioId));
+            }
+            else
+            {
+                response = await Http.PutAsJsonAsync($"api/v1/admin/lessons/{_editing.Id}",
+                    new TeacherApp.Contracts.Lessons.UpdateLessonRequest(_form.Title, _form.Description, _form.Order, audioId));
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _formError = $"Erro ({(int)response.StatusCode}).";
+                return;
+            }
+
+            _showForm = false;
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _formError = "Erro de conexão.";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task Delete(Guid id)
+    {
+        try
+        {
+            await Http.DeleteAsync($"api/v1/admin/lessons/{id}");
+            await LoadAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao excluir lição.";
+        }
+    }
+}

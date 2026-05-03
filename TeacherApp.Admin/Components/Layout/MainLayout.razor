@@ -1,4 +1,7 @@
 ﻿@inherits LayoutComponentBase
+@inject TokenStorageService TokenStorage
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="page">
     <div class="sidebar">
@@ -7,7 +10,12 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <AuthorizeView>
+                <Authorized>
+                    <span class="me-3 text-muted small">@TokenStorage.Email</span>
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="Logout">Sair</button>
+                </Authorized>
+            </AuthorizeView>
         </div>
 
         <article class="content px-4">
@@ -19,5 +27,14 @@
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+    <span class="dismiss">X</span>
 </div>
+
+@code {
+    private void Logout()
+    {
+        TokenStorage.Clear();
+        ((TeacherApp.Admin.Auth.JwtAuthenticationStateProvider)AuthStateProvider).NotifyAuthStateChanged();
+        Navigation.NavigateTo("/login", forceLoad: false);
+    }
+}
