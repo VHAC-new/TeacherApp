@@ -3,13 +3,21 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Amazon;
+using Amazon.S3;
 using TeacherApp.Api.Application.Admin.Exercises;
 using TeacherApp.Api.Application.Admin.FinalExercises;
 using TeacherApp.Api.Application.Admin.Lessons;
+using TeacherApp.Api.Application.Admin.Media;
 using TeacherApp.Api.Application.Admin.Modules;
 using TeacherApp.Api.Application.Auth;
+using TeacherApp.Api.Application.Catalog;
+using TeacherApp.Api.Application.Exercises;
+using TeacherApp.Api.Application.Media;
+using TeacherApp.Api.Application.Progress;
 using TeacherApp.Api.Data;
 using TeacherApp.Api.Infrastructure.Seed;
+using TeacherApp.Api.Infrastructure.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,6 +70,33 @@ builder.Services.AddScoped<IAdminModuleService, AdminModuleService>();
 builder.Services.AddScoped<IAdminLessonService, AdminLessonService>();
 builder.Services.AddScoped<IAdminExerciseService, AdminExerciseService>();
 builder.Services.AddScoped<IAdminFinalExerciseService, AdminFinalExerciseService>();
+builder.Services.Configure<MediaS3Options>(builder.Configuration.GetSection("Media:S3"));
+
+var s3Bucket = builder.Configuration["Media:S3:Bucket"];
+if (!string.IsNullOrWhiteSpace(s3Bucket))
+{
+    var s3Region = builder.Configuration["Media:S3:Region"]
+        ?? builder.Configuration["AWS:Region"]
+        ?? Environment.GetEnvironmentVariable("AWS_REGION");
+    if (string.IsNullOrWhiteSpace(s3Region))
+    {
+        throw new InvalidOperationException(
+            "Media:S3:Bucket is set but Media:S3:Region (or AWS_REGION / AWS:Region) is required for S3.");
+    }
+
+    builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(RegionEndpoint.GetBySystemName(s3Region)));
+    builder.Services.AddSingleton<IS3MediaOperations, S3MediaOperations>();
+}
+else
+{
+    builder.Services.AddSingleton<IS3MediaOperations, DisabledS3MediaOperations>();
+}
+
+builder.Services.AddScoped<IAdminMediaService, AdminMediaService>();
+builder.Services.AddScoped<IMediaPlaybackService, MediaPlaybackService>();
+builder.Services.AddScoped<ICatalogService, CatalogService>();
+builder.Services.AddScoped<IExerciseSubmitService, ExerciseSubmitService>();
+builder.Services.AddScoped<IProgressService, ProgressService>();
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
 var jwtAudience = builder.Configuration["Jwt:Audience"];
@@ -100,6 +135,26 @@ builder.Services
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+var mediaBucket = app.Configuration["Media:S3:Bucket"];
+if (!string.IsNullOrWhiteSpace(mediaBucket))
+{
+    var mediaRegion = app.Configuration["Media:S3:Region"]
+        ?? app.Configuration["AWS:Region"]
+        ?? Environment.GetEnvironmentVariable("AWS_REGION");
+    var mediaArnObjectPattern = $"arn:aws:s3:::{mediaBucket}/*";
+    app.Logger.LogInformation(
+        "S3 media storage enabled. Bucket={Bucket}. Region={Region}. IAM policy Resource should include {MediaArnObjectPattern}",
+        mediaBucket,
+        mediaRegion ?? "(from SDK default / instance profile)",
+        mediaArnObjectPattern);
+
+    if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID")))
+    {
+        app.Logger.LogInformation(
+            "AWS_ACCESS_KEY_ID is not set; the AWS SDK will use instance profile, shared credentials file, or other default chain.");
+    }
+}
 
 if (app.Environment.IsDevelopment())
 {

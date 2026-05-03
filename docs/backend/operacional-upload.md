@@ -9,7 +9,7 @@
 
 ## Onde se aplica
 
-* Endpoints relacionados com **media** / **áudio** (ex.: fluxo associado a `AudioController` e rotas `/api/v1/admin/media`).
+* Rotas `/api/v1/admin/media`: **multipart** (disco local) ou **`POST .../upload-url`** + **`POST .../{id}/complete`** (S3 presigned), conforme [storage.md](storage.md).
 
 ---
 
