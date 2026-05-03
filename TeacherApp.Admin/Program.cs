@@ -21,19 +21,22 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<TokenStorageService>();
-builder.Services.AddScoped<BearerTokenHandler>();
 builder.Services.AddScoped<AuthenticationStateProvider, JwtAuthenticationStateProvider>();
 
 var apiBaseUrl = builder.Configuration["Api:BaseUrl"] ?? "http://localhost:5092";
 
-builder.Services.AddHttpClient("Api", client =>
-{
-    client.BaseAddress = new Uri(apiBaseUrl);
-    client.DefaultRequestHeaders.Add("Accept", "application/json");
-}).AddHttpMessageHandler<BearerTokenHandler>();
-
+// HttpClientFactory resolves message handlers outside the Blazor circuit scope, so
+// BearerTokenHandler would get a different TokenStorageService than Login/components.
+// Build the pipeline in the same scoped provider as the rest of the circuit.
 builder.Services.AddScoped(sp =>
-    sp.GetRequiredService<IHttpClientFactory>().CreateClient("Api"));
+{
+    var tokenStorage = sp.GetRequiredService<TokenStorageService>();
+    var inner = new HttpClientHandler();
+    var bearer = new BearerTokenHandler(tokenStorage) { InnerHandler = inner };
+    var client = new HttpClient(bearer) { BaseAddress = new Uri(apiBaseUrl) };
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    return client;
+});
 
 builder.Services.AddMudServices();
 builder.Services.AddScoped<AdminThemeState>();
