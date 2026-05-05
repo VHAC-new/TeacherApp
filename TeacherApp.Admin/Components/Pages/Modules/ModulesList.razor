@@ -6,35 +6,57 @@
 
 <PageTitle>Módulos — TeacherApp Admin</PageTitle>
 
-<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-4">
     <MudText Typo="Typo.h4">Módulos</MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenForm(null))">Novo Módulo</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenForm(null))">Novo Módulo</MudButton>
 </MudStack>
+
+<MudTextField T="string"
+              @bind-Value="_searchTerm"
+              @bind-Value:after="OnSearchChanged"
+              Placeholder="Buscar módulos..."
+              Adornment="Adornment.Start"
+              AdornmentIcon="@Icons.Material.Filled.Search"
+              Variant="Variant.Outlined"
+              Margin="Margin.Dense"
+              Class="mb-4"
+              Immediate="true"
+              DebounceInterval="250" />
 
 @if (_loading)
 {
     <MudProgressLinear Indeterminate="true" />
 }
-else if (_modules.Count == 0)
+else if (FilteredModules.Count == 0)
 {
-    <MudText Typo="Typo.body1" Color="Color.Secondary">Nenhum módulo cadastrado.</MudText>
+    <MudText Typo="Typo.body1" Color="Color.Secondary">
+        @(string.IsNullOrWhiteSpace(_searchTerm)
+            ? "Nenhum módulo cadastrado."
+            : "Nenhum resultado para a busca.")
+    </MudText>
 }
 else
 {
-    <MudTable Items="@_modules.OrderBy(x => x.Order).ToList()" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
+    <MudTable Items="@FilteredModules" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
         <HeaderContent>
             <MudTh>Ordem</MudTh>
             <MudTh>Título</MudTh>
             <MudTh>Descrição</MudTh>
+            <MudTh>Lições</MudTh>
             <MudTh Style="width: 200px;">Ações</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Ordem">@context.Order</MudTd>
             <MudTd DataLabel="Título">@context.Title</MudTd>
             <MudTd DataLabel="Descrição">@(context.Description ?? "—")</MudTd>
+            <MudTd DataLabel="Lições">@context.LessonCount</MudTd>
             <MudTd DataLabel="Ações">
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Class="mr-1" OnClick="@(() => OpenForm(context))">Editar</MudButton>
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => Delete(context.Id))">Excluir</MudButton>
+                <MudTooltip Text="Editar">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => OpenForm(context))" />
+                </MudTooltip>
+                <MudTooltip Text="Excluir">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => Delete(context.Id))" />
+                </MudTooltip>
             </MudTd>
         </RowTemplate>
     </MudTable>
@@ -90,6 +112,17 @@ else
     private List<TeacherApp.Contracts.Modules.ModuleResponse> _modules = [];
     private bool _loading = true;
     private string? _error;
+    private string? _searchTerm;
+
+    private List<TeacherApp.Contracts.Modules.ModuleResponse> FilteredModules =>
+        _modules
+            .Where(m => string.IsNullOrWhiteSpace(_searchTerm)
+                || m.Title.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
+                || (m.Description?.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ?? false))
+            .OrderBy(m => m.Order)
+            .ToList();
+
+    private void OnSearchChanged() { /* triggers re-render via binding */ }
 
     private bool _showForm;
     private bool _saving;

@@ -12,7 +12,8 @@ public sealed class AdminModuleService(AppDbContext db) : IAdminModuleService
         return await db.Modules
             .AsNoTracking()
             .OrderBy(x => x.Order)
-            .Select(x => new ModuleResponse(x.Id, x.Title, x.Description, x.Order))
+            .Select(x => new ModuleResponse(x.Id, x.Title, x.Description, x.Order,
+                db.Lessons.Count(l => l.ModuleId == x.Id)))
             .ToListAsync(cancellationToken);
     }
 
@@ -21,7 +22,8 @@ public sealed class AdminModuleService(AppDbContext db) : IAdminModuleService
         return await db.Modules
             .AsNoTracking()
             .Where(x => x.Id == id)
-            .Select(x => new ModuleResponse(x.Id, x.Title, x.Description, x.Order))
+            .Select(x => new ModuleResponse(x.Id, x.Title, x.Description, x.Order,
+                db.Lessons.Count(l => l.ModuleId == x.Id)))
             .FirstOrDefaultAsync(cancellationToken);
     }
 
