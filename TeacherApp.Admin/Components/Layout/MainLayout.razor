@@ -44,7 +44,8 @@
             <MudNavLink Href="/media" Icon="@Icons.Material.Filled.PermMedia">Mídia</MudNavLink>
         </MudNavMenu>
     </MudDrawer>
-    <MudMainContent Class="pt-4 px-4 px-md-8 pb-8">
+    @* Avoid pt-* here: Mud padding utilities use !important and override the offset for the fixed app bar. *@
+    <MudMainContent Class="px-4 px-md-8 pb-8">
         @Body
     </MudMainContent>
 </MudLayout>

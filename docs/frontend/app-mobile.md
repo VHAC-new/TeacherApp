@@ -8,7 +8,7 @@ MVVM — detalhes, CommunityToolkit e fluxo View → ViewModel → Service em [a
 
 ## Suporte para tema Claro/Escuro
 
-**Requisito:** nas plataformas **Android** e **iOS** (e, no mesmo projeto MAUI, **Windows** / **Mac Catalyst** quando aplicável), a app deve respeitar **tema claro e tema escuro**: seguir a preferência do sistema ou permitir um override explícito na aplicação, mantendo contraste e legibilidade em todas as telas.
+**Requisito:** nas plataformas **Android** e **iOS** , a app deve respeitar **tema claro e tema escuro**: seguir a preferência do sistema ou permitir um override explícito na aplicação, mantendo contraste e legibilidade em todas as telas.
 
 **Abordagem recomendada (.NET MAUI):**
 

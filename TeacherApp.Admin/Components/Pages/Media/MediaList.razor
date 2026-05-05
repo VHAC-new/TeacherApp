@@ -3,55 +3,156 @@
 
 @inject HttpClient Http
 @inject IDialogService DialogService
+@inject IJSRuntime JS
 
 <PageTitle>Mídia — TeacherApp Admin</PageTitle>
 
-<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
-    <MudText Typo="Typo.h4">Mídia</MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => _showUpload = true)">Upload</MudButton>
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+    <div>
+        <MudText Typo="Typo.h4">Mídia</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Gerencie seus arquivos de áudio e imagem</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Upload"
+               OnClick="@(() => _showUpload = true)">Upload</MudButton>
 </MudStack>
+
+@* Search *@
+<MudTextField T="string"
+              @bind-Value="_searchTerm"
+              @bind-Value:after="OnSearchChanged"
+              Placeholder="Buscar arquivos..."
+              Adornment="Adornment.Start"
+              AdornmentIcon="@Icons.Material.Filled.Search"
+              Variant="Variant.Outlined"
+              Margin="Margin.Dense"
+              Class="mb-4"
+              Immediate="true"
+              DebounceInterval="250" />
 
 @if (_loading)
 {
     <MudProgressLinear Indeterminate="true" />
 }
-else if (_mediaFiles.Count == 0)
+else if (FilteredMedia.Count == 0)
 {
-    <MudText Typo="Typo.body1" Color="Color.Secondary">Nenhum arquivo de mídia encontrado.</MudText>
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+        @(string.IsNullOrWhiteSpace(_searchTerm)
+            ? "Nenhum arquivo de mídia encontrado."
+            : "Nenhum resultado para a busca.")
+    </MudText>
 }
 else
 {
-    <MudTable Items="@_mediaFiles" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm" RowClassFunc="@RowClassFunc">
-        <HeaderContent>
-            <MudTh>Nome</MudTh>
-            <MudTh>Tipo</MudTh>
-            <MudTh>Tamanho</MudTh>
-            <MudTh>Upload em</MudTh>
-            <MudTh>Status</MudTh>
-            <MudTh Style="width: 120px;">Ações</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Nome">@context.FileName</MudTd>
-            <MudTd DataLabel="Tipo">@context.ContentType</MudTd>
-            <MudTd DataLabel="Tamanho">@FormatBytes(context.SizeBytes)</MudTd>
-            <MudTd DataLabel="Upload em">@context.UploadedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
-            <MudTd DataLabel="Status">
-                @if (context.UploadCompleted)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Success">Completo</MudChip>
-                }
-                else
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">Pendente</MudChip>
-                }
-            </MudTd>
-            <MudTd DataLabel="Ações">
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => Delete(context.Id))">Excluir</MudButton>
-            </MudTd>
-        </RowTemplate>
-    </MudTable>
+    @* Card grid (Figma-aligned) *@
+    <MudGrid Spacing="4" Class="mb-6">
+        @foreach (var media in FilteredMedia)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="1" Class="@CardClass(media)">
+                    <MudCardContent>
+                        <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start">
+                            <MudAvatar Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Large">
+                                <MudIcon Icon="@MediaIcon(media)" />
+                            </MudAvatar>
+                            <MudStack Spacing="0" Style="min-width:0; flex:1;">
+                                <MudText Typo="Typo.subtitle2" Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                    @media.FileName
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @FormatBytes(media.SizeBytes)
+                                </MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                    <MudDivider />
+                    <MudCardActions>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-2" Style="flex:1;">
+                            @media.UploadedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                        </MudText>
+                        @if (media.UploadCompleted && IsAudio(media))
+                        {
+                            <MudTooltip Text="Reproduzir">
+                                <MudIconButton Icon="@Icons.Material.Filled.PlayArrow"
+                                               Color="Color.Primary"
+                                               Size="Size.Small"
+                                               OnClick="@(() => PlayAsync(media))" />
+                            </MudTooltip>
+                        }
+                        @if (!media.UploadCompleted)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">Pendente</MudChip>
+                        }
+                        <MudTooltip Text="Copiar ID">
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                           Size="Size.Small"
+                                           OnClick="@(() => CopyIdAsync(media.Id))" />
+                        </MudTooltip>
+                        <MudTooltip Text="Excluir">
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           Size="Size.Small"
+                                           OnClick="@(() => Delete(media.Id))" />
+                        </MudTooltip>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
 }
 
+@* Inline audio player *@
+@if (_playingMediaName is not null)
+{
+    <MudPaper Elevation="2" Class="pa-3 mb-4" Style="position:sticky;bottom:1rem;z-index:10;">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.MusicNote" Color="Color.Primary" />
+            <MudText Typo="Typo.body2" Style="flex:1;">@_playingMediaName</MudText>
+            <audio id="admin-media-player" controls autoplay style="max-width:360px;width:100%;"></audio>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="StopPlaying" />
+        </MudStack>
+    </MudPaper>
+}
+
+@* Drop zone *@
+<div class="admin-media-dropzone @(_isDragOver ? "admin-media-dropzone--active" : "")"
+     @ondragenter="OnDragEnter"
+     @ondragover="OnDragOver"
+     @ondragover:preventDefault="true"
+     @ondragleave="OnDragLeave"
+     @ondrop="OnDropAsync"
+     @ondrop:preventDefault="true">
+    <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Style="font-size:3rem;" Color="Color.Secondary" />
+    <MudText Typo="Typo.subtitle1" Class="mt-2">Arraste e solte arquivos aqui ou clique para selecionar</MudText>
+    <MudText Typo="Typo.caption" Color="Color.Secondary">Suporta MP3, WAV, M4A, imagens — até 50 MB</MudText>
+    <InputFile OnChange="OnDropZoneFileSelectedAsync"
+               accept="audio/*,image/*"
+               disabled="@_uploading"
+               class="admin-media-dropzone-input" />
+</div>
+
+@* Upload progress (inline, replaces the dialog for drop-zone uploads) *@
+@if (_uploadProgress is not null)
+{
+    <MudPaper Elevation="1" Class="pa-4 mt-4">
+        <MudStack Spacing="1">
+            <MudProgressLinear Value="@(_uploadProgress.Value)"
+                               Color="@(_uploadError is not null ? Color.Error : Color.Primary)" />
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@_uploadStatus</MudText>
+        </MudStack>
+        @if (!string.IsNullOrEmpty(_uploadError))
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@_uploadError</MudAlert>
+        }
+        @if (_uploadSuccess)
+        {
+            <MudAlert Severity="Severity.Success" Dense="true" Class="mt-2">Upload concluído com sucesso!</MudAlert>
+        }
+    </MudPaper>
+}
+
+@* Legacy upload dialog (button-triggered) *@
 <MudDialog @bind-Visible="_showUpload" Options="_dialogOptions">
     <TitleContent>
         <MudText Typo="Typo.h6">Upload de Mídia</MudText>
@@ -105,6 +206,7 @@ else
     private List<TeacherApp.Contracts.Media.MediaResponse> _mediaFiles = [];
     private bool _loading = true;
     private string? _error;
+    private string? _searchTerm;
 
     private bool _showUpload;
     private bool _uploading;
@@ -113,8 +215,26 @@ else
     private string? _uploadError;
     private bool _uploadSuccess;
 
-    private static string RowClassFunc(TeacherApp.Contracts.Media.MediaResponse row, int _) =>
-        row.UploadCompleted ? string.Empty : "admin-media-row-pending";
+    private bool _isDragOver;
+    private string? _playingMediaName;
+
+    private List<TeacherApp.Contracts.Media.MediaResponse> FilteredMedia =>
+        string.IsNullOrWhiteSpace(_searchTerm)
+            ? _mediaFiles
+            : _mediaFiles.Where(m =>
+                m.FileName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                m.ContentType.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    private static bool IsAudio(TeacherApp.Contracts.Media.MediaResponse m) =>
+        m.ContentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase);
+
+    private static string MediaIcon(TeacherApp.Contracts.Media.MediaResponse m) =>
+        IsAudio(m) ? Icons.Material.Filled.MusicNote : Icons.Material.Filled.Image;
+
+    private static string CardClass(TeacherApp.Contracts.Media.MediaResponse m) =>
+        m.UploadCompleted ? string.Empty : "admin-media-card-pending";
+
+    private void OnSearchChanged() => StateHasChanged();
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -135,6 +255,8 @@ else
             _loading = false;
         }
     }
+
+    // --- Upload (dialog) ---
 
     private Task OnFileSelectedAsync(InputFileChangeEventArgs e) => ProcessFileAsync(e.File);
 
@@ -271,6 +393,88 @@ else
         _uploadSuccess = false;
     }
 
+    // --- Drag-and-drop ---
+
+    private void OnDragEnter() => _isDragOver = true;
+    private void OnDragOver() { }
+    private void OnDragLeave() => _isDragOver = false;
+
+    private async Task OnDropAsync()
+    {
+        _isDragOver = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnDropZoneFileSelectedAsync(InputFileChangeEventArgs e) => ProcessFileAsync(e.File);
+
+    // --- Playback ---
+
+    private async Task PlayAsync(TeacherApp.Contracts.Media.MediaResponse media)
+    {
+        _playingMediaName = media.FileName;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var playbackResponse = await Http.GetAsync($"api/v1/media/{media.Id}/playback-url");
+
+            if (playbackResponse.IsSuccessStatusCode)
+            {
+                var result = await playbackResponse.Content
+                    .ReadFromJsonAsync<TeacherApp.Contracts.Media.MediaPlaybackUrlResponse>();
+                if (result is not null)
+                {
+                    await JS.InvokeVoidAsync("eval",
+                        $"document.getElementById('admin-media-player').src = '{result.Url}';");
+                    return;
+                }
+            }
+
+            var streamResponse = await Http.GetAsync($"api/v1/media/{media.Id}");
+            if (!streamResponse.IsSuccessStatusCode)
+            {
+                _playingMediaName = null;
+                _error = "Não foi possível reproduzir o arquivo.";
+                return;
+            }
+
+            var bytes = await streamResponse.Content.ReadAsByteArrayAsync();
+            var base64 = Convert.ToBase64String(bytes);
+            var dataUri = $"data:{media.ContentType};base64,{base64}";
+            await JS.InvokeVoidAsync("eval",
+                $"document.getElementById('admin-media-player').src = '{dataUri}';");
+        }
+        catch (HttpRequestException)
+        {
+            _playingMediaName = null;
+            _error = "Erro de conexão ao reproduzir.";
+        }
+    }
+
+    private async Task StopPlaying()
+    {
+        _playingMediaName = null;
+        try
+        {
+            await JS.InvokeVoidAsync("eval",
+                "var p = document.getElementById('admin-media-player'); if(p){p.pause();p.src='';}");
+        }
+        catch { }
+    }
+
+    // --- Copy ID ---
+
+    private async Task CopyIdAsync(Guid id)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", id.ToString());
+        }
+        catch { }
+    }
+
+    // --- Delete ---
+
     private async Task Delete(Guid id)
     {
         var confirm = await DialogService.ShowMessageBoxAsync(
@@ -291,6 +495,8 @@ else
             _error = "Erro ao excluir mídia.";
         }
     }
+
+    // --- Helpers ---
 
     private static string FormatBytes(long bytes)
     {

@@ -32,6 +32,39 @@ h1:focus {
     background-color: color-mix(in srgb, var(--mud-palette-warning) 12%, transparent);
 }
 
+.admin-media-card-pending {
+    border-left: 3px solid var(--mud-palette-warning);
+}
+
+.admin-media-dropzone {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1.5rem;
+    border: 2px dashed var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    transition: border-color 0.2s, background-color 0.2s;
+    cursor: pointer;
+    text-align: center;
+}
+
+.admin-media-dropzone:hover,
+.admin-media-dropzone--active {
+    border-color: var(--mud-palette-primary);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 6%, transparent);
+}
+
+.admin-media-dropzone-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
 #blazor-error-ui {
     color-scheme: light only;
     background: lightyellow;
