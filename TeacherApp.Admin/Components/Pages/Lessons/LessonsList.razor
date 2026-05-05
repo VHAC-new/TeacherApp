@@ -88,7 +88,7 @@ else
     </MudTable>
 }
 
-<MudDialog @bind-Visible="_showForm" Options="_dialogOptions">
+<MudDialog Visible="_showForm" VisibleChanged="OnLessonFormVisibleChanged" Options="_dialogOptions">
     <TitleContent>
         <MudText Typo="Typo.h6">@(_editing is null ? "Nova Lição" : "Editar Lição")</MudText>
     </TitleContent>
@@ -96,16 +96,13 @@ else
         <EditForm Model="_form" OnValidSubmit="Save">
             <DataAnnotationsValidator />
             <MudStack Spacing="3">
-                @if (_editing is null)
-                {
-                    <MudSelect T="string" @bind-Value="_form.ModuleId" Label="Módulo" Variant="Variant.Outlined" Required="true">
-                        @foreach (var m in _modules)
-                        {
-                            <MudSelectItem T="string" Value="@m.Id.ToString()">@m.Title</MudSelectItem>
-                        }
-                    </MudSelect>
-                }
                 <MudTextField @bind-Value="_form.Title" For="@(() => _form.Title)" Label="Título da lição" Variant="Variant.Outlined" />
+                <MudSelect T="string" @bind-Value="_form.ModuleId" Label="Módulo" Variant="Variant.Outlined" Required="true">
+                    @foreach (var m in _modules)
+                    {
+                        <MudSelectItem T="string" Value="@m.Id.ToString()">@m.Title</MudSelectItem>
+                    }
+                </MudSelect>
                 <MudTextField @bind-Value="_form.Description" Label="Conteúdo da lição" Variant="Variant.Outlined" Lines="10"
                               Placeholder="Escreva o conteúdo de leitura para os alunos..." />
                 <MudText Typo="Typo.caption" Color="Color.Secondary">Material de leitura apresentado aos alunos</MudText>
@@ -137,9 +134,8 @@ else
                             </MudStack>
                             <MudStack Row="true" Spacing="1">
                                 <MudTooltip Text="Reproduzir">
-                                    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small" Color="Color.Success"
-                                                   Disabled="@_playingLessonAudio"
-                                                   OnClick="@PlaySelectedAudioAsync" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small" Color="Color.Primary"
+                                                   OnClick="@StartLessonAudioPreviewAsync" />
                                 </MudTooltip>
                                 <MudTooltip Text="Trocar áudio">
                                     <MudIconButton Icon="@Icons.Material.Filled.SwapHoriz" Size="Size.Small" Color="Color.Primary"
@@ -153,12 +149,27 @@ else
                         </MudStack>
                     </MudPaper>
                 }
+
+                @if (_playingLessonPreviewName is not null)
+                {
+                    <MudPaper Elevation="1" Outlined="true" Class="pa-3">
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.MusicNote" Color="Color.Primary" />
+                                <MudText Typo="Typo.body2" Style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;">@_playingLessonPreviewName</MudText>
+                                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="@StopLessonPreviewAsync" />
+                            </MudStack>
+                            <audio id="lesson-dialog-audio-player" controls autoplay style="width:100%;"></audio>
+                        </MudStack>
+                    </MudPaper>
+                }
+
                 @if (!string.IsNullOrEmpty(_formError))
                 {
                     <MudAlert Severity="Severity.Error" Dense="true">@_formError</MudAlert>
                 }
                 <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd">
-                    <MudButton Variant="Variant.Text" OnClick="CloseForm">Cancelar</MudButton>
+                    <MudButton Variant="Variant.Text" OnClick="@CloseFormAsync">Cancelar</MudButton>
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Disabled="_saving">
                         @if (_saving)
                         {
@@ -216,11 +227,6 @@ else
     </DialogContent>
 </MudDialog>
 
-<audio id="lessons-form-audio-player"
-       autoplay
-       style="position:absolute;width:0;height:0;opacity:0;pointer-events:none"
-       aria-hidden="true"></audio>
-
 @if (!string.IsNullOrEmpty(_error))
 {
     <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
@@ -260,7 +266,7 @@ else
     private LessonFormModel _form = new();
     private string? _audioSearchTerm;
     private bool _showAudioPicker;
-    private bool _playingLessonAudio;
+    private string? _playingLessonPreviewName;
 
     private List<TeacherApp.Contracts.Media.MediaResponse> FilteredAudioMedia =>
         _audioMedia
@@ -353,7 +359,17 @@ else
         _showForm = true;
     }
 
-    private void CloseForm() => _showForm = false;
+    private async Task OnLessonFormVisibleChanged(bool visible)
+    {
+        _showForm = visible;
+        if (!visible)
+            await StopLessonPreviewAsync();
+    }
+
+    private async Task CloseFormAsync()
+    {
+        await OnLessonFormVisibleChanged(false);
+    }
 
     private async Task Save()
     {
@@ -374,8 +390,13 @@ else
             }
             else
             {
+                if (!Guid.TryParse(_form.ModuleId, out var editModuleId))
+                {
+                    _formError = "Selecione um módulo.";
+                    return;
+                }
                 response = await Http.PutAsJsonAsync($"api/v1/admin/lessons/{_editing.Id}",
-                    new TeacherApp.Contracts.Lessons.UpdateLessonRequest(_form.Title, _form.Description, _form.Order, _form.AudioMediaId));
+                    new TeacherApp.Contracts.Lessons.UpdateLessonRequest(_form.Title, _form.Description, _form.Order, editModuleId, _form.AudioMediaId));
             }
 
             if (!response.IsSuccessStatusCode)
@@ -385,6 +406,7 @@ else
             }
 
             _showForm = false;
+            await StopLessonPreviewAsync();
             await LoadAsync();
         }
         catch (HttpRequestException)
@@ -444,12 +466,12 @@ else
         };
     }
 
-    private async Task PlaySelectedAudioAsync()
+    private async Task StartLessonAudioPreviewAsync()
     {
         if (_form.AudioMediaId is not { } mediaId)
             return;
 
-        _playingLessonAudio = true;
+        _playingLessonPreviewName = _form.AudioFileName ?? "Áudio";
         _formError = null;
         await InvokeAsync(StateHasChanged);
 
@@ -458,94 +480,68 @@ else
             var media = _audioMedia.FirstOrDefault(m => m.Id == mediaId);
             if (media is not null)
             {
-                await PlayMediaAsync(media);
+                await LoadAudioIntoPlayerAsync(media.Id, media.ContentType);
                 return;
             }
 
-            var playbackResponse = await Http.GetAsync($"api/v1/media/{mediaId}/playback-url");
-            if (playbackResponse.IsSuccessStatusCode)
-            {
-                var result = await playbackResponse.Content
-                    .ReadFromJsonAsync<TeacherApp.Contracts.Media.MediaPlaybackUrlResponse>();
-                if (result is not null)
-                {
-                    await JS.InvokeVoidAsync("eval",
-                        $"document.getElementById('lessons-form-audio-player').src = '{result.Url}';");
-                    return;
-                }
-            }
-
-            var streamResponse = await Http.GetAsync($"api/v1/media/{mediaId}");
-            if (!streamResponse.IsSuccessStatusCode)
-            {
-                _formError = "Não foi possível reproduzir o áudio.";
-                return;
-            }
-
-            var bytes = await streamResponse.Content.ReadAsByteArrayAsync();
-            var base64 = Convert.ToBase64String(bytes);
-            var contentType = streamResponse.Content.Headers.ContentType?.MediaType ?? "audio/mpeg";
-            var dataUri = $"data:{contentType};base64,{base64}";
-            await JS.InvokeVoidAsync("eval",
-                $"document.getElementById('lessons-form-audio-player').src = '{dataUri}';");
+            await LoadAudioIntoPlayerAsync(mediaId, null);
         }
         catch (HttpRequestException)
         {
             _formError = "Erro de conexão ao reproduzir.";
-        }
-        finally
-        {
-            _playingLessonAudio = false;
+            _playingLessonPreviewName = null;
             await InvokeAsync(StateHasChanged);
         }
     }
 
-    private async Task PlayMediaAsync(TeacherApp.Contracts.Media.MediaResponse media)
+    private async Task LoadAudioIntoPlayerAsync(Guid mediaId, string? knownContentType)
+    {
+        var playbackResponse = await Http.GetAsync($"api/v1/media/{mediaId}/playback-url");
+        if (playbackResponse.IsSuccessStatusCode)
+        {
+            var result = await playbackResponse.Content
+                .ReadFromJsonAsync<TeacherApp.Contracts.Media.MediaPlaybackUrlResponse>();
+            if (result is not null)
+            {
+                await JS.InvokeVoidAsync("eval",
+                    $"document.getElementById('lesson-dialog-audio-player').src = '{result.Url}';");
+                return;
+            }
+        }
+
+        var streamResponse = await Http.GetAsync($"api/v1/media/{mediaId}");
+        if (!streamResponse.IsSuccessStatusCode)
+        {
+            _playingLessonPreviewName = null;
+            _formError = "Não foi possível reproduzir o áudio.";
+            return;
+        }
+
+        var bytes = await streamResponse.Content.ReadAsByteArrayAsync();
+        var base64 = Convert.ToBase64String(bytes);
+        var contentType = knownContentType
+            ?? streamResponse.Content.Headers.ContentType?.MediaType
+            ?? "audio/mpeg";
+        var dataUri = $"data:{contentType};base64,{base64}";
+        await JS.InvokeVoidAsync("eval",
+            $"document.getElementById('lesson-dialog-audio-player').src = '{dataUri}';");
+    }
+
+    private async Task StopLessonPreviewAsync()
     {
         try
         {
-            var playbackResponse = await Http.GetAsync($"api/v1/media/{media.Id}/playback-url");
-
-            if (playbackResponse.IsSuccessStatusCode)
-            {
-                var result = await playbackResponse.Content
-                    .ReadFromJsonAsync<TeacherApp.Contracts.Media.MediaPlaybackUrlResponse>();
-                if (result is not null)
-                {
-                    await JS.InvokeVoidAsync("eval",
-                        $"document.getElementById('lessons-form-audio-player').src = '{result.Url}';");
-                    return;
-                }
-            }
-
-            var streamResponse = await Http.GetAsync($"api/v1/media/{media.Id}");
-            if (!streamResponse.IsSuccessStatusCode)
-            {
-                _formError = "Não foi possível reproduzir o áudio.";
-                return;
-            }
-
-            var bytes = await streamResponse.Content.ReadAsByteArrayAsync();
-            var base64 = Convert.ToBase64String(bytes);
-            var dataUri = $"data:{media.ContentType};base64,{base64}";
             await JS.InvokeVoidAsync("eval",
-                $"document.getElementById('lessons-form-audio-player').src = '{dataUri}';");
+                "var p = document.getElementById('lesson-dialog-audio-player'); if(p){p.pause();p.src='';}");
         }
-        catch (HttpRequestException)
-        {
-            _formError = "Erro de conexão ao reproduzir.";
-        }
+        catch { /* ignore */ }
+        _playingLessonPreviewName = null;
     }
 
     private async Task ClearLessonAudioAsync()
     {
         _form.AudioMediaId = null;
         _form.AudioFileName = null;
-        try
-        {
-            await JS.InvokeVoidAsync("eval",
-                "var p = document.getElementById('lessons-form-audio-player'); if(p){p.pause();p.removeAttribute('src');}");
-        }
-        catch { /* ignore */ }
+        await StopLessonPreviewAsync();
     }
 }

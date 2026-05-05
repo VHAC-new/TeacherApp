@@ -78,12 +78,19 @@ public sealed class AdminLessonService(AppDbContext db) : IAdminLessonService
         Validate(request.Title, request.Description, request.Order);
         await ValidateAudioMediaIdAsync(request.AudioMediaId, cancellationToken);
 
+        var moduleExists = await db.Modules.AnyAsync(x => x.Id == request.ModuleId, cancellationToken);
+        if (!moduleExists)
+        {
+            throw new ArgumentException("Module not found.");
+        }
+
         var entity = await db.Lessons.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (entity is null)
         {
             return null;
         }
 
+        entity.ModuleId = request.ModuleId;
         entity.Title = request.Title.Trim();
         entity.Description = request.Description?.Trim();
         entity.Order = request.Order;

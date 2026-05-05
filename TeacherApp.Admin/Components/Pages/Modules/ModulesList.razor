@@ -51,8 +51,12 @@ else
             <MudTd DataLabel="Descrição">@(context.Description ?? "—")</MudTd>
             <MudTd DataLabel="Lições">@context.LessonCount</MudTd>
             <MudTd DataLabel="Ações">
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Class="mr-1" OnClick="@(() => OpenForm(context))">Editar</MudButton>
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => Delete(context.Id))">Excluir</MudButton>
+                <MudTooltip Text="Editar">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => OpenForm(context))" />
+                </MudTooltip>
+                <MudTooltip Text="Excluir">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => Delete(context.Id))" />
+                </MudTooltip>
             </MudTd>
         </RowTemplate>
     </MudTable>
