@@ -14,7 +14,8 @@ public sealed class CatalogService(AppDbContext db) : ICatalogService
         return await db.Modules
             .AsNoTracking()
             .OrderBy(x => x.Order)
-            .Select(x => new ModuleResponse(x.Id, x.Title, x.Description, x.Order))
+            .Select(x => new ModuleResponse(x.Id, x.Title, x.Description, x.Order,
+                db.Lessons.Count(l => l.ModuleId == x.Id)))
             .ToListAsync(cancellationToken);
     }
 
@@ -24,7 +25,7 @@ public sealed class CatalogService(AppDbContext db) : ICatalogService
             .AsNoTracking()
             .Where(x => x.ModuleId == moduleId)
             .OrderBy(x => x.Order)
-            .Select(x => new LessonResponse(x.Id, x.ModuleId, x.Title, x.Description, x.Order, x.AudioMediaId))
+            .Select(x => new LessonResponse(x.Id, x.ModuleId, x.Title, x.Description, x.Order, x.AudioMediaId, null))
             .ToListAsync(cancellationToken);
     }
 

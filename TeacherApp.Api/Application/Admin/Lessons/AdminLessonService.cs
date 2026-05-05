@@ -19,7 +19,10 @@ public sealed class AdminLessonService(AppDbContext db) : IAdminLessonService
         return await query
             .OrderBy(x => x.ModuleId)
             .ThenBy(x => x.Order)
-            .Select(x => new LessonResponse(x.Id, x.ModuleId, x.Title, x.Description, x.Order, x.AudioMediaId))
+            .Select(x => new LessonResponse(x.Id, x.ModuleId, x.Title, x.Description, x.Order, x.AudioMediaId,
+                x.AudioMediaId != null
+                    ? db.MediaFiles.Where(m => m.Id == x.AudioMediaId).Select(m => m.FileName).FirstOrDefault()
+                    : null))
             .ToListAsync(cancellationToken);
     }
 
@@ -28,7 +31,10 @@ public sealed class AdminLessonService(AppDbContext db) : IAdminLessonService
         return await db.Lessons
             .AsNoTracking()
             .Where(x => x.Id == id)
-            .Select(x => new LessonResponse(x.Id, x.ModuleId, x.Title, x.Description, x.Order, x.AudioMediaId))
+            .Select(x => new LessonResponse(x.Id, x.ModuleId, x.Title, x.Description, x.Order, x.AudioMediaId,
+                x.AudioMediaId != null
+                    ? db.MediaFiles.Where(m => m.Id == x.AudioMediaId).Select(m => m.FileName).FirstOrDefault()
+                    : null))
             .FirstOrDefaultAsync(cancellationToken);
     }
 

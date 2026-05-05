@@ -22,10 +22,12 @@ public sealed class AdminModulesIntegrationTests : IClassFixture<TestWebAppFacto
         var created = await createResponse.Content.ReadFromJsonAsync<ModuleResponse>();
         Assert.NotNull(created);
         Assert.Equal("Module 1", created.Title);
+        Assert.Equal(0, created.LessonCount);
 
         var modules = await client.GetFromJsonAsync<List<ModuleResponse>>("/api/v1/admin/modules");
         Assert.NotNull(modules);
         Assert.Single(modules);
+        Assert.Equal(0, modules[0].LessonCount);
 
         var updateResponse = await client.PutAsJsonAsync($"/api/v1/admin/modules/{created.Id}",
             new UpdateModuleRequest("Module 1 Updated", "Updated desc", 1));

@@ -6,4 +6,5 @@ public sealed record LessonResponse(
     string Title,
     string? Description,
     int Order,
-    Guid? AudioMediaId);
+    Guid? AudioMediaId,
+    string? AudioFileName = null);
