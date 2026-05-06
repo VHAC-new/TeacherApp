@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Amazon;
 using Amazon.S3;
+using TeacherApp.Api.Application.Admin.Dashboard;
 using TeacherApp.Api.Application.Admin.Exercises;
 using TeacherApp.Api.Application.Admin.FinalExercises;
 using TeacherApp.Api.Application.Admin.Lessons;
@@ -66,6 +67,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IDashboardAdminService, DashboardAdminService>();
 builder.Services.AddScoped<IAdminModuleService, AdminModuleService>();
 builder.Services.AddScoped<IAdminLessonService, AdminLessonService>();
 builder.Services.AddScoped<IAdminExerciseService, AdminExerciseService>();
