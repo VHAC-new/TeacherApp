@@ -7,4 +7,5 @@ public sealed record UpdateExerciseRequest(
     string? Explanation,
     bool IgnoreCase,
     bool IgnoreWhitespace,
-    int Order);
+    int Order,
+    Guid LessonId);

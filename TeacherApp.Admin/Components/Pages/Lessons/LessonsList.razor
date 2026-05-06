@@ -7,41 +7,46 @@
 
 <PageTitle>Lições — TeacherApp Admin</PageTitle>
 
-<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-4">
     <div>
         <MudText Typo="Typo.h4">Lições</MudText>
         <MudText Typo="Typo.body2" Color="Color.Secondary">Gerencie o conteúdo das lições</MudText>
     </div>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenForm(null))" Disabled="@(_modules.Count == 0)">Nova Lição</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(async () => await OpenNewLessonAsync())" Disabled="@(_modules.Count == 0)">Nova Lição</MudButton>
 </MudStack>
 
-<MudStack Row="true" Spacing="4" AlignItems="AlignItems.Center" Class="mb-4">
-    <MudTextField T="string"
-                  @bind-Value="_searchTerm"
-                  @bind-Value:after="OnSearchChanged"
-                  Placeholder="Buscar lições..."
-                  Adornment="Adornment.Start"
-                  AdornmentIcon="@Icons.Material.Filled.Search"
-                  Variant="Variant.Outlined"
-                  Margin="Margin.Dense"
-                  Immediate="true"
-                  DebounceInterval="250"
-                  Style="flex:1;" />
-    <MudSelect T="Guid?"
-               Value="_filterModuleId"
-               ValueChanged="OnModuleFilterChangedAsync"
-               Label="Módulo"
-               Clearable="true"
-               Variant="Variant.Outlined"
-               Margin="Margin.Dense"
-               Style="max-width: 280px; min-width: 180px;">
-        <MudSelectItem T="Guid?" Value="@null">Todos</MudSelectItem>
-        @foreach (var m in _modules)
-        {
-            <MudSelectItem T="Guid?" Value="@m.Id">@m.Title</MudSelectItem>
-        }
-    </MudSelect>
-</MudStack>
+@* Filtros alinhados ao admin/Lessons.tsx (Figma Make): flex-row + gap, busca em flex:1 + input w-full, módulo à direita (flex:0) *@
+<div class="mb-4" style="width:100%; display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px;">
+    <div style="flex:1 1 12rem; min-width:0;">
+        <MudTextField T="string"
+                      @bind-Value="_searchTerm"
+                      @bind-Value:after="OnSearchChanged"
+                      Placeholder="Buscar lições..."
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Immediate="true"
+                      DebounceInterval="250"
+                      FullWidth="true" />
+    </div>
+    <div style="flex:0 0 auto; min-width:12.5rem; max-width:100%;">
+        <MudSelect T="Guid?"
+                   Value="_filterModuleId"
+                   ValueChanged="OnModuleFilterChangedAsync"
+                   Label="Módulo"
+                   Clearable="true"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense"
+                   FullWidth="true">
+            <MudSelectItem T="Guid?" Value="@null">Todos</MudSelectItem>
+            @foreach (var m in _modules)
+            {
+                <MudSelectItem T="Guid?" Value="@m.Id">@m.Title</MudSelectItem>
+            }
+        </MudSelect>
+    </div>
+</div>
 
 @if (_loading)
 {
@@ -81,7 +86,7 @@ else
                 }
             </MudTd>
             <MudTd DataLabel="Ações">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => OpenForm(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(async () => await OpenFormAsync(context))" />
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => Delete(context.Id))" />
             </MudTd>
         </RowTemplate>
@@ -96,6 +101,22 @@ else
         <EditForm Model="_form" OnValidSubmit="Save">
             <DataAnnotationsValidator />
             <MudStack Spacing="3">
+                @if (_editing is not null)
+                {
+                    <MudSelect T="Guid"
+                               @key="_editing.Id"
+                               Value="_editing.Id"
+                               ValueChanged="OnSwitchEditingLessonAsync"
+                               Label="Lição"
+                               Variant="Variant.Outlined"
+                               Dense="true">
+                        @foreach (var l in LessonsForPicker)
+                        {
+                            var modTitle = _modules.FirstOrDefault(m => m.Id == l.ModuleId)?.Title ?? "—";
+                            <MudSelectItem T="Guid" Value="@l.Id">@l.Title · @modTitle</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
                 <MudTextField @bind-Value="_form.Title" For="@(() => _form.Title)" Label="Título da lição" Variant="Variant.Outlined" />
                 <MudSelect T="string" @bind-Value="_form.ModuleId" Label="Módulo" Variant="Variant.Outlined" Required="true">
                     @foreach (var m in _modules)
@@ -243,6 +264,8 @@ else
 
     private List<TeacherApp.Contracts.Modules.ModuleResponse> _modules = [];
     private List<TeacherApp.Contracts.Lessons.LessonResponse> _lessons = [];
+    private List<TeacherApp.Contracts.Lessons.LessonResponse> _lessonPickerList = [];
+    private bool _lessonPickerReady;
     private List<TeacherApp.Contracts.Media.MediaResponse> _audioMedia = [];
     private bool _loading = true;
     private string? _error;
@@ -258,6 +281,12 @@ else
             .ToList();
 
     private void OnSearchChanged() { }
+
+    private IEnumerable<TeacherApp.Contracts.Lessons.LessonResponse> LessonsForPicker =>
+        _lessonPickerList
+            .OrderBy(l => _modules.FirstOrDefault(m => m.Id == l.ModuleId)?.Title ?? "\uFFFF", StringComparer.OrdinalIgnoreCase)
+            .ThenBy(l => l.Order)
+            .ThenBy(l => l.Title, StringComparer.OrdinalIgnoreCase);
 
     private bool _showForm;
     private bool _saving;
@@ -335,8 +364,39 @@ else
         await LoadAsync();
     }
 
-    private void OpenForm(TeacherApp.Contracts.Lessons.LessonResponse? lesson)
+    private void InvalidateLessonPickerCache()
     {
+        _lessonPickerList = [];
+        _lessonPickerReady = false;
+    }
+
+    private async Task EnsureLessonPickerListAsync()
+    {
+        if (_lessonPickerReady)
+            return;
+        try
+        {
+            _lessonPickerList = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Lessons.LessonResponse>>("api/v1/admin/lessons") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            _lessonPickerList = [];
+        }
+        _lessonPickerReady = true;
+    }
+
+    private async Task OpenNewLessonAsync()
+    {
+        await OpenFormAsync(null);
+    }
+
+    private async Task OpenFormAsync(TeacherApp.Contracts.Lessons.LessonResponse? lesson)
+    {
+        await StopLessonPreviewAsync();
+
+        if (lesson is not null)
+            await EnsureLessonPickerListAsync();
+
         _editing = lesson;
         _audioSearchTerm = null;
         _showAudioPicker = false;
@@ -357,6 +417,16 @@ else
             };
         _formError = null;
         _showForm = true;
+    }
+
+    private async Task OnSwitchEditingLessonAsync(Guid id)
+    {
+        if (_editing?.Id == id)
+            return;
+        var lesson = _lessonPickerList.FirstOrDefault(l => l.Id == id);
+        if (lesson is null)
+            return;
+        await OpenFormAsync(lesson);
     }
 
     private async Task OnLessonFormVisibleChanged(bool visible)
@@ -407,6 +477,7 @@ else
 
             _showForm = false;
             await StopLessonPreviewAsync();
+            InvalidateLessonPickerCache();
             await LoadAsync();
         }
         catch (HttpRequestException)
@@ -432,6 +503,7 @@ else
         try
         {
             await Http.DeleteAsync($"api/v1/admin/lessons/{id}");
+            InvalidateLessonPickerCache();
             await LoadAsync();
         }
         catch (HttpRequestException)

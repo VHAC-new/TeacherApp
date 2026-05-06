@@ -73,12 +73,19 @@ public sealed class AdminFinalExerciseService(AppDbContext db) : IAdminFinalExer
     {
         Validate(request.Prompt, request.ExpectedAnswer, request.Hint, request.Explanation, request.Order);
 
+        var moduleExists = await db.Modules.AnyAsync(x => x.Id == request.ModuleId, cancellationToken);
+        if (!moduleExists)
+        {
+            throw new ArgumentException("Module not found.");
+        }
+
         var entity = await db.FinalExercises.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (entity is null)
         {
             return null;
         }
 
+        entity.ModuleId = request.ModuleId;
         entity.Prompt = request.Prompt.Trim();
         entity.ExpectedAnswer = request.ExpectedAnswer.Trim();
         entity.Hint = request.Hint?.Trim();

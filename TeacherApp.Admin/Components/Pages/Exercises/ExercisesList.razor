@@ -6,8 +6,11 @@
 
 <PageTitle>Exercícios — TeacherApp Admin</PageTitle>
 
-<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
-    <MudText Typo="Typo.h4">Exercícios</MudText>
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-4">
+    <div>
+        <MudText Typo="Typo.h4">Exercícios</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Gerencie o conteúdo dos exercícios</MudText>
+    </div>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenForm(null))" Disabled="@(_lessons.Count == 0)">Novo Exercício</MudButton>
 </MudStack>
 
@@ -37,20 +40,22 @@ else
 {
     <MudTable Items="@_exercises.OrderBy(x => x.Order).ToList()" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
         <HeaderContent>
-            <MudTh>Ordem</MudTh>
             <MudTh>Pergunta</MudTh>
             <MudTh>Resposta</MudTh>
             <MudTh>Lição</MudTh>
             <MudTh Style="width: 200px;">Ações</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="Ordem">@context.Order</MudTd>
             <MudTd DataLabel="Pergunta">@Truncate(context.Prompt, 60)</MudTd>
             <MudTd DataLabel="Resposta">@Truncate(context.ExpectedAnswer, 30)</MudTd>
             <MudTd DataLabel="Lição">@(_lessons.FirstOrDefault(l => l.Id == context.LessonId)?.Title ?? "—")</MudTd>
             <MudTd DataLabel="Ações">
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Class="mr-1" OnClick="@(() => OpenForm(context))">Editar</MudButton>
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => Delete(context.Id))">Excluir</MudButton>
+                <MudTooltip Text="Editar">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => OpenForm(context))" />
+                </MudTooltip>
+                <MudTooltip Text="Excluir">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => Delete(context.Id))" />
+                </MudTooltip>
             </MudTd>
         </RowTemplate>
     </MudTable>
@@ -64,26 +69,18 @@ else
         <EditForm Model="_form" OnValidSubmit="Save">
             <DataAnnotationsValidator />
             <MudStack Spacing="3">
-                @if (_editing is null)
-                {
-                    <MudSelect T="string" @bind-Value="_form.LessonId" Label="Lição" Variant="Variant.Outlined">
-                        @foreach (var l in _lessons)
-                        {
-                            <MudSelectItem T="string" Value="@l.Id.ToString()">@l.Title</MudSelectItem>
-                        }
-                    </MudSelect>
-                }
+                <MudSelect T="string" @bind-Value="_form.LessonId" Label="Lição" Variant="Variant.Outlined" Required="true">
+                    @foreach (var l in _lessons)
+                    {
+                        <MudSelectItem T="string" Value="@l.Id.ToString()">@l.Title</MudSelectItem>
+                    }
+                </MudSelect>
                 <MudTextField @bind-Value="_form.Prompt" For="@(() => _form.Prompt)" Label="Pergunta (Prompt)" Variant="Variant.Outlined" Lines="3" />
                 <MudTextField @bind-Value="_form.ExpectedAnswer" For="@(() => _form.ExpectedAnswer)" Label="Resposta esperada" Variant="Variant.Outlined" />
-                <MudGrid Spacing="2">
-                    <MudItem xs="12" md="6">
-                        <MudTextField @bind-Value="_form.Hint" Label="Dica" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="6">
-                        <MudNumericField @bind-Value="_form.Order" Label="Ordem" Variant="Variant.Outlined" Min="0" />
-                    </MudItem>
-                </MudGrid>
+                <MudTextField @bind-Value="_form.Hint" Label="Dica" Variant="Variant.Outlined" />
                 <MudTextField @bind-Value="_form.Explanation" Label="Explicação" Variant="Variant.Outlined" Lines="2" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Conteúdo do exercício apresentado aos alunos</MudText>
+                <MudNumericField @bind-Value="_form.Order" Label="Ordem" Variant="Variant.Outlined" Min="0" />
                 <MudStack Row="true" Spacing="3" Wrap="Wrap.Wrap">
                     <MudCheckBox @bind-Value="_form.IgnoreCase" Label="Ignorar maiúsculas/minúsculas" Color="Color.Primary" />
                     <MudCheckBox @bind-Value="_form.IgnoreWhitespace" Label="Ignorar espaços" Color="Color.Primary" />
@@ -231,10 +228,15 @@ else
             }
             else
             {
+                if (!Guid.TryParse(_form.LessonId, out var editLessonId))
+                {
+                    _formError = "Selecione uma lição.";
+                    return;
+                }
                 response = await Http.PutAsJsonAsync($"api/v1/admin/exercises/{_editing.Id}",
                     new TeacherApp.Contracts.Exercises.UpdateExerciseRequest(
                         _form.Prompt, _form.ExpectedAnswer, _form.Hint, _form.Explanation,
-                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order));
+                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order, editLessonId));
             }
 
             if (!response.IsSuccessStatusCode)
