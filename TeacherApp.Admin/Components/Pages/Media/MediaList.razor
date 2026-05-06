@@ -116,7 +116,8 @@ else
 }
 
 @* Drop zone *@
-<div class="admin-media-dropzone @(_isDragOver ? "admin-media-dropzone--active" : "")"
+<div id="admin-media-dropzone"
+     class="admin-media-dropzone @(_isDragOver ? "admin-media-dropzone--active" : "")"
      @ondragenter="OnDragEnter"
      @ondragover="OnDragOver"
      @ondragover:preventDefault="true"
@@ -126,7 +127,8 @@ else
     <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Style="font-size:3rem;" Color="Color.Secondary" />
     <MudText Typo="Typo.subtitle1" Class="mt-2">Arraste e solte arquivos aqui ou clique para selecionar</MudText>
     <MudText Typo="Typo.caption" Color="Color.Secondary">Suporta MP3, WAV, M4A, imagens — até 50 MB</MudText>
-    <InputFile OnChange="OnDropZoneFileSelectedAsync"
+    <InputFile id="admin-media-dropzone-input"
+               OnChange="OnDropZoneFileSelectedAsync"
                accept="audio/*,image/*"
                disabled="@_uploading"
                class="admin-media-dropzone-input" />
@@ -217,6 +219,7 @@ else
 
     private bool _isDragOver;
     private string? _playingMediaName;
+    private bool _dropzoneWired;
 
     private List<TeacherApp.Contracts.Media.MediaResponse> FilteredMedia =>
         string.IsNullOrWhiteSpace(_searchTerm)
@@ -237,6 +240,15 @@ else
     private void OnSearchChanged() => StateHasChanged();
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_dropzoneWired)
+            return;
+
+        _dropzoneWired = true;
+        await JS.InvokeVoidAsync("teacherAppAdminDropzone.register", "admin-media-dropzone");
+    }
 
     private async Task LoadAsync()
     {
@@ -402,6 +414,7 @@ else
     private async Task OnDropAsync()
     {
         _isDragOver = false;
+        await JS.InvokeVoidAsync("teacherAppAdminDropzone.forwardLastDropToInput", "admin-media-dropzone-input");
         await InvokeAsync(StateHasChanged);
     }
 
