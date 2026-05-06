@@ -6,51 +6,79 @@
 
 <PageTitle>Exercícios Finais — TeacherApp Admin</PageTitle>
 
-<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
-    <MudText Typo="Typo.h4">Exercícios Finais</MudText>
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-4">
+    <div>
+        <MudText Typo="Typo.h4">Exercícios Finais</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Gerencie o conteúdo dos exercícios finais</MudText>
+    </div>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenForm(null))" Disabled="@(_modules.Count == 0)">Novo Exercício Final</MudButton>
 </MudStack>
 
-<MudSelect T="Guid?"
-           Value="_filterModuleId"
-           ValueChanged="OnModuleFilterChangedAsync"
-           Label="Filtrar por módulo"
-           Clearable="true"
-           Class="mb-4"
-           Style="max-width: 320px;">
-    <MudSelectItem T="Guid?" Value="@null">Todos</MudSelectItem>
-    @foreach (var m in _modules)
-    {
-        <MudSelectItem T="Guid?" Value="@m.Id">@m.Title</MudSelectItem>
-    }
-</MudSelect>
+@* Filtros — mesmo padrão da tela Lições (flex + gap, busca flex:1 + FullWidth, módulo à direita) *@
+<div class="mb-4" style="width:100%; display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px;">
+    <div style="flex:1 1 12rem; min-width:0;">
+        <MudTextField T="string"
+                      @bind-Value="_searchTerm"
+                      @bind-Value:after="OnSearchChanged"
+                      Placeholder="Buscar exercícios finais..."
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Immediate="true"
+                      DebounceInterval="250"
+                      FullWidth="true" />
+    </div>
+    <div style="flex:0 0 auto; min-width:12.5rem; max-width:100%;">
+        <MudSelect T="Guid?"
+                   Value="_filterModuleId"
+                   ValueChanged="OnModuleFilterChangedAsync"
+                   Label="Módulo"
+                   Clearable="true"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense"
+                   FullWidth="true">
+            <MudSelectItem T="Guid?" Value="@null">Todos</MudSelectItem>
+            @foreach (var m in _modules)
+            {
+                <MudSelectItem T="Guid?" Value="@m.Id">@m.Title</MudSelectItem>
+            }
+        </MudSelect>
+    </div>
+</div>
 
 @if (_loading)
 {
     <MudProgressLinear Indeterminate="true" />
 }
-else if (_exercises.Count == 0)
+else if (FilteredFinalExercises.Count == 0)
 {
-    <MudText Typo="Typo.body1" Color="Color.Secondary">Nenhum exercício final encontrado.</MudText>
+    <MudText Typo="Typo.body1" Color="Color.Secondary">
+        @(string.IsNullOrWhiteSpace(_searchTerm)
+            ? "Nenhum exercício final encontrado."
+            : "Nenhum resultado para a busca.")
+    </MudText>
 }
 else
 {
-    <MudTable Items="@_exercises.OrderBy(x => x.Order).ToList()" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
+    <MudTable Items="@FilteredFinalExercises" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
         <HeaderContent>
-            <MudTh>Ordem</MudTh>
             <MudTh>Pergunta</MudTh>
             <MudTh>Resposta</MudTh>
             <MudTh>Módulo</MudTh>
             <MudTh Style="width: 200px;">Ações</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="Ordem">@context.Order</MudTd>
             <MudTd DataLabel="Pergunta">@Truncate(context.Prompt, 60)</MudTd>
             <MudTd DataLabel="Resposta">@Truncate(context.ExpectedAnswer, 30)</MudTd>
             <MudTd DataLabel="Módulo">@(_modules.FirstOrDefault(m => m.Id == context.ModuleId)?.Title ?? "—")</MudTd>
             <MudTd DataLabel="Ações">
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Class="mr-1" OnClick="@(() => OpenForm(context))">Editar</MudButton>
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => Delete(context.Id))">Excluir</MudButton>
+                <MudTooltip Text="Editar">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => OpenForm(context))" />
+                </MudTooltip>
+                <MudTooltip Text="Excluir">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => Delete(context.Id))" />
+                </MudTooltip>
             </MudTd>
         </RowTemplate>
     </MudTable>
@@ -64,26 +92,18 @@ else
         <EditForm Model="_form" OnValidSubmit="Save">
             <DataAnnotationsValidator />
             <MudStack Spacing="3">
-                @if (_editing is null)
-                {
-                    <MudSelect T="string" @bind-Value="_form.ModuleId" Label="Módulo" Variant="Variant.Outlined">
-                        @foreach (var m in _modules)
-                        {
-                            <MudSelectItem T="string" Value="@m.Id.ToString()">@m.Title</MudSelectItem>
-                        }
-                    </MudSelect>
-                }
+                <MudSelect T="string" @bind-Value="_form.ModuleId" Label="Módulo" Variant="Variant.Outlined" Required="true">
+                    @foreach (var m in _modules)
+                    {
+                        <MudSelectItem T="string" Value="@m.Id.ToString()">@m.Title</MudSelectItem>
+                    }
+                </MudSelect>
                 <MudTextField @bind-Value="_form.Prompt" For="@(() => _form.Prompt)" Label="Pergunta (Prompt)" Variant="Variant.Outlined" Lines="3" />
                 <MudTextField @bind-Value="_form.ExpectedAnswer" For="@(() => _form.ExpectedAnswer)" Label="Resposta esperada" Variant="Variant.Outlined" />
-                <MudGrid Spacing="2">
-                    <MudItem xs="12" md="6">
-                        <MudTextField @bind-Value="_form.Hint" Label="Dica" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" md="6">
-                        <MudNumericField @bind-Value="_form.Order" Label="Ordem" Variant="Variant.Outlined" Min="0" />
-                    </MudItem>
-                </MudGrid>
+                <MudTextField @bind-Value="_form.Hint" Label="Dica" Variant="Variant.Outlined" />
                 <MudTextField @bind-Value="_form.Explanation" Label="Explicação" Variant="Variant.Outlined" Lines="2" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Conteúdo do exercício apresentado aos alunos</MudText>
+                <MudNumericField @bind-Value="_form.Order" Label="Ordem" Variant="Variant.Outlined" Min="0" />
                 <MudStack Row="true" Spacing="3" Wrap="Wrap.Wrap">
                     <MudCheckBox @bind-Value="_form.IgnoreCase" Label="Ignorar maiúsculas/minúsculas" Color="Color.Primary" />
                     <MudCheckBox @bind-Value="_form.IgnoreWhitespace" Label="Ignorar espaços" Color="Color.Primary" />
@@ -129,6 +149,18 @@ else
     private bool _loading = true;
     private string? _error;
     private Guid? _filterModuleId;
+    private string? _searchTerm;
+
+    private List<TeacherApp.Contracts.FinalExercises.FinalExerciseResponse> FilteredFinalExercises =>
+        _exercises
+            .Where(e => string.IsNullOrWhiteSpace(_searchTerm)
+                || e.Prompt.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
+                || e.ExpectedAnswer.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
+                || (_modules.FirstOrDefault(m => m.Id == e.ModuleId)?.Title?.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ?? false))
+            .OrderBy(e => e.Order)
+            .ToList();
+
+    private void OnSearchChanged() { }
 
     private bool _showForm;
     private bool _saving;
@@ -231,10 +263,15 @@ else
             }
             else
             {
+                if (!Guid.TryParse(_form.ModuleId, out var editModuleId))
+                {
+                    _formError = "Selecione um módulo.";
+                    return;
+                }
                 response = await Http.PutAsJsonAsync($"api/v1/admin/final-exercises/{_editing.Id}",
                     new TeacherApp.Contracts.FinalExercises.UpdateFinalExerciseRequest(
                         _form.Prompt, _form.ExpectedAnswer, _form.Hint, _form.Explanation,
-                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order));
+                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order, editModuleId));
             }
 
             if (!response.IsSuccessStatusCode)

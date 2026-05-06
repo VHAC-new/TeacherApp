@@ -7,21 +7,29 @@
 <PageTitle>Módulos — TeacherApp Admin</PageTitle>
 
 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-4">
-    <MudText Typo="Typo.h4">Módulos</MudText>
+    <div>
+        <MudText Typo="Typo.h4">Módulos</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Gerencie o conteúdo dos módulos</MudText>
+    </div>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenForm(null))">Novo Módulo</MudButton>
 </MudStack>
 
-<MudTextField T="string"
-              @bind-Value="_searchTerm"
-              @bind-Value:after="OnSearchChanged"
-              Placeholder="Buscar módulos..."
-              Adornment="Adornment.Start"
-              AdornmentIcon="@Icons.Material.Filled.Search"
-              Variant="Variant.Outlined"
-              Margin="Margin.Dense"
-              Class="mb-4"
-              Immediate="true"
-              DebounceInterval="250" />
+@* Busca — mesmo container e espaçamentos da tela Lições *@
+<div class="mb-4" style="width:100%; display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px;">
+    <div style="flex:1 1 12rem; min-width:0;">
+        <MudTextField T="string"
+                      @bind-Value="_searchTerm"
+                      @bind-Value:after="OnSearchChanged"
+                      Placeholder="Buscar módulos..."
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Immediate="true"
+                      DebounceInterval="250"
+                      FullWidth="true" />
+    </div>
+</div>
 
 @if (_loading)
 {
@@ -39,14 +47,12 @@ else
 {
     <MudTable Items="@FilteredModules" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
         <HeaderContent>
-            <MudTh>Ordem</MudTh>
             <MudTh>Título</MudTh>
             <MudTh>Descrição</MudTh>
             <MudTh>Lições</MudTh>
             <MudTh Style="width: 200px;">Ações</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="Ordem">@context.Order</MudTd>
             <MudTd DataLabel="Título">@context.Title</MudTd>
             <MudTd DataLabel="Descrição">@(context.Description ?? "—")</MudTd>
             <MudTd DataLabel="Lições">@context.LessonCount</MudTd>
@@ -72,6 +78,7 @@ else
             <MudStack Spacing="3">
                 <MudTextField @bind-Value="_form.Title" For="@(() => _form.Title)" Label="Título" Variant="Variant.Outlined" />
                 <MudTextField @bind-Value="_form.Description" Label="Descrição" Variant="Variant.Outlined" Lines="3" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Descrição apresentada aos alunos</MudText>
                 <MudNumericField @bind-Value="_form.Order" Label="Ordem" Variant="Variant.Outlined" Min="0" />
                 @if (!string.IsNullOrEmpty(_formError))
                 {

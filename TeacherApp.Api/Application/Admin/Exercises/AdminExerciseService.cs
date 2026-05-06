@@ -73,12 +73,19 @@ public sealed class AdminExerciseService(AppDbContext db) : IAdminExerciseServic
     {
         Validate(request.Prompt, request.ExpectedAnswer, request.Hint, request.Explanation, request.Order);
 
+        var lessonExists = await db.Lessons.AnyAsync(x => x.Id == request.LessonId, cancellationToken);
+        if (!lessonExists)
+        {
+            throw new ArgumentException("Lesson not found.");
+        }
+
         var entity = await db.Exercises.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (entity is null)
         {
             return null;
         }
 
+        entity.LessonId = request.LessonId;
         entity.Prompt = request.Prompt.Trim();
         entity.ExpectedAnswer = request.ExpectedAnswer.Trim();
         entity.Hint = request.Hint?.Trim();
