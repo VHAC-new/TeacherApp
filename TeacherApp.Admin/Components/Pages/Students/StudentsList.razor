@@ -1,0 +1,152 @@
+@page "/students"
+@attribute [Authorize]
+
+@using TeacherApp.Contracts.Admin
+
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Students — TeacherApp Admin</PageTitle>
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-4">
+    <div>
+        <MudText Typo="Typo.h4">Student Performance</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Monitor student activity and review their answers</MudText>
+    </div>
+</MudStack>
+
+<div class="mb-4" style="width:100%; display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px;">
+    <div style="flex:1 1 12rem; min-width:0;">
+        <MudTextField T="string"
+                      @bind-Value="_searchTerm"
+                      @bind-Value:after="OnSearchChanged"
+                      Placeholder="Search by student name..."
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Immediate="true"
+                      DebounceInterval="250"
+                      FullWidth="true" />
+    </div>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (FilteredStudents.Count == 0)
+{
+    <MudText Typo="Typo.body1" Color="Color.Secondary">
+        @(string.IsNullOrWhiteSpace(_searchTerm) ? "No students found." : "No results for the search.")
+    </MudText>
+}
+else
+{
+    <MudPaper Class="rounded-xl" Style="border: 1px solid var(--mud-palette-lines-default);" Elevation="0">
+        <MudTable Items="@FilteredStudents" Hover="true" Breakpoint="Breakpoint.Sm" Dense="false"
+                  Elevation="0" Class="rounded-xl">
+            <HeaderContent>
+                <MudTh>Student Name</MudTh>
+                <MudTh>Progress</MudTh>
+                <MudTh>Accuracy</MudTh>
+                <MudTh>Total Answers</MudTh>
+                <MudTh>Last Activity</MudTh>
+                <MudTh Style="width:140px;">Action</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Student Name">
+                    <div class="d-flex align-center gap-3">
+                        <MudAvatar Color="Color.Primary" Size="Size.Medium"
+                                   Style="font-size: 0.85rem; font-weight: 600;">
+                            @StudentDisplay.GetInitials(context.Name, context.Email)
+                        </MudAvatar>
+                        <div>
+                            <MudText Typo="Typo.body1" Style="font-weight:500;">
+                                @StudentDisplay.GetDisplayName(context.Name, context.Email)
+                            </MudText>
+                        </div>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="Progress">
+                    <div class="d-flex align-center gap-2" style="min-width:120px;">
+                        <MudProgressLinear Value="@context.ProgressPercent"
+                                           Color="Color.Primary"
+                                           Rounded="true"
+                                           Size="Size.Small"
+                                           Style="width:60px;" />
+                        <MudText Typo="Typo.body2">@($"{context.ProgressPercent:0}%")</MudText>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="Accuracy">
+                    <div class="d-flex align-center gap-1">
+                        <MudIcon Icon="@(context.AccuracyPercent >= 70 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
+                                 Color="@StudentDisplay.GetAccuracyColor(context.AccuracyPercent)"
+                                 Size="Size.Small" />
+                        <MudText Typo="Typo.body2"
+                                 Color="@StudentDisplay.GetAccuracyColor(context.AccuracyPercent)"
+                                 Style="font-weight:600;">
+                            @($"{context.AccuracyPercent:0}%")
+                        </MudText>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="Total Answers">@context.TotalAnswers</MudTd>
+                <MudTd DataLabel="Last Activity">@FormatDate(context.LastActivity)</MudTd>
+                <MudTd DataLabel="Action">
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               EndIcon="@Icons.Material.Filled.ChevronRight"
+                               OnClick="@(() => Navigation.NavigateTo($"/students/{context.Id}"))">
+                        View Details
+                    </MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+}
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
+}
+
+@code {
+    private List<AdminStudentPerformanceResponse> _students = [];
+    private bool _loading = true;
+    private string? _error;
+    private string? _searchTerm;
+
+    private List<AdminStudentPerformanceResponse> FilteredStudents =>
+        _students
+            .Where(s => string.IsNullOrWhiteSpace(_searchTerm)
+                || StudentDisplay.GetDisplayName(s.Name, s.Email)
+                    .Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
+                || s.Email.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    private void OnSearchChanged() { }
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _students = await Http.GetFromJsonAsync<List<AdminStudentPerformanceResponse>>("api/v1/admin/students") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao carregar alunos.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string FormatDate(DateTimeOffset? date)
+        => date?.ToLocalTime().ToString("yyyy-MM-dd") ?? "—";
+}

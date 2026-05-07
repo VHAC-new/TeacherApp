@@ -1,0 +1,282 @@
+@page "/students/{Id:guid}"
+@attribute [Authorize]
+
+@using TeacherApp.Contracts.Admin
+@using TeacherApp.Contracts.Modules
+
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Student Details — TeacherApp Admin</PageTitle>
+
+<MudButton Variant="Variant.Text"
+           Color="Color.Default"
+           StartIcon="@Icons.Material.Filled.ArrowBack"
+           Class="mb-2"
+           OnClick="@(() => Navigation.NavigateTo("/students"))">
+    Back to Students
+</MudButton>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (_details is null)
+{
+    <MudAlert Severity="Severity.Warning">Student not found.</MudAlert>
+}
+else
+{
+    <MudPaper Class="pa-6 rounded-xl mb-4" Style="border: 1px solid var(--mud-palette-lines-default);" Elevation="0">
+        <div class="d-flex align-center gap-4">
+            <MudAvatar Color="Color.Primary" Size="Size.Large"
+                       Style="width:56px; height:56px; font-size:1.2rem; font-weight:600;">
+                @StudentDisplay.GetInitials(_details.Name, _details.Email)
+            </MudAvatar>
+            <div>
+                <MudText Typo="Typo.h5" Style="font-weight:600;">
+                    @StudentDisplay.GetDisplayName(_details.Name, _details.Email)
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@_details.Email</MudText>
+            </div>
+        </div>
+    </MudPaper>
+
+    <MudGrid Spacing="4" Class="mb-4">
+        <MudItem xs="12" sm="4">
+            <MudCard Class="rounded-xl" Style="border: 1px solid var(--mud-palette-lines-default);" Elevation="0">
+                <MudCardContent Class="pa-5">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Total Exercises</MudText>
+                    <MudText Typo="Typo.h4" Class="mt-1">@_details.TotalExercises</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudCard Class="rounded-xl" Style="border: 1px solid var(--mud-palette-lines-default);" Elevation="0">
+                <MudCardContent Class="pa-5">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Accuracy Rate</MudText>
+                    <div class="d-flex align-end gap-2 mt-1">
+                        <MudText Typo="Typo.h4"
+                                 Color="@StudentDisplay.GetAccuracyColor(_details.AccuracyPercent)">
+                            @($"{_details.AccuracyPercent:0}%")
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
+                            (@_details.CorrectCount correct, @_details.IncorrectCount incorrect)
+                        </MudText>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudCard Class="rounded-xl" Style="border: 1px solid var(--mud-palette-lines-default);" Elevation="0">
+                <MudCardContent Class="pa-5">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Last Activity</MudText>
+                    <MudText Typo="Typo.h4" Class="mt-1">@FormatDate(_details.LastActivity)</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pa-6 rounded-xl" Style="border: 1px solid var(--mud-palette-lines-default);" Elevation="0">
+        <MudText Typo="Typo.h6" Class="mb-4">Answer History</MudText>
+
+        <div class="d-flex flex-wrap gap-3 mb-4">
+            <MudSelect T="Guid?"
+                       Value="_filterModuleId"
+                       ValueChanged="OnModuleFilterChanged"
+                       Label="All Modules"
+                       Clearable="true"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Style="max-width:200px;"
+                       Adornment="Adornment.Start"
+                       AdornmentIcon="@Icons.Material.Filled.FilterList">
+                <MudSelectItem T="Guid?" Value="@((Guid?)null)">All Modules</MudSelectItem>
+                @foreach (var m in _modules)
+                {
+                    <MudSelectItem T="Guid?" Value="@m.Id">@m.Title</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSelect T="bool?"
+                       Value="_filterIsCorrect"
+                       ValueChanged="OnCorrectFilterChanged"
+                       Label="All Answers"
+                       Clearable="true"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Style="max-width:180px;"
+                       Adornment="Adornment.Start"
+                       AdornmentIcon="@Icons.Material.Filled.FilterList">
+                <MudSelectItem T="bool?" Value="@((bool?)null)">All Answers</MudSelectItem>
+                <MudSelectItem T="bool?" Value="@true">Correct</MudSelectItem>
+                <MudSelectItem T="bool?" Value="@false">Incorrect</MudSelectItem>
+            </MudSelect>
+
+            <MudSelect T="string"
+                       @bind-Value="_sortOrder"
+                       Label="Sort by Date"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Style="max-width:180px;">
+                <MudSelectItem T="string" Value="@("desc")">Newest First</MudSelectItem>
+                <MudSelectItem T="string" Value="@("asc")">Oldest First</MudSelectItem>
+            </MudSelect>
+        </div>
+
+        @if (_answersLoading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (SortedAnswers.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary">No answers found.</MudText>
+        }
+        else
+        {
+            <MudTable Items="@SortedAnswers" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Exercise</MudTh>
+                    <MudTh>Student Answer</MudTh>
+                    <MudTh>Correct Answer</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Module / Lesson</MudTh>
+                    <MudTh>Date</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Exercise">
+                        <MudText Typo="Typo.body2" Style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                            @Truncate(context.ExercisePrompt, 60)
+                        </MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Student Answer">
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Color="@(context.IsCorrect ? Color.Success : Color.Error)"
+                                 Variant="Variant.Filled">
+                            @context.SubmittedAnswer
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Correct Answer">@context.ExpectedAnswer</MudTd>
+                    <MudTd DataLabel="Status">
+                        @if (context.IsCorrect)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text"
+                                     Icon="@Icons.Material.Filled.CheckCircle">
+                                Correct
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Text"
+                                     Icon="@Icons.Material.Filled.Cancel">
+                                Incorrect
+                            </MudChip>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Module / Lesson">
+                        <div>
+                            <MudText Typo="Typo.body2" Style="font-weight:500;">@context.ModuleTitle</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.LessonTitle</MudText>
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Date">@context.AttemptedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
+}
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private AdminStudentDetailsResponse? _details;
+    private List<AdminStudentAnswerResponse> _answers = [];
+    private List<ModuleResponse> _modules = [];
+    private bool _loading = true;
+    private bool _answersLoading;
+    private string? _error;
+
+    private Guid? _filterModuleId;
+    private bool? _filterIsCorrect;
+    private string _sortOrder = "desc";
+
+    private List<AdminStudentAnswerResponse> SortedAnswers =>
+        (_sortOrder == "asc"
+            ? _answers.OrderBy(a => a.AttemptedAt)
+            : _answers.OrderByDescending(a => a.AttemptedAt))
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var detailsTask = Http.GetFromJsonAsync<AdminStudentDetailsResponse>($"api/v1/admin/students/{Id}");
+            var modulesTask = Http.GetFromJsonAsync<List<ModuleResponse>>("api/v1/admin/modules");
+            await Task.WhenAll(detailsTask, modulesTask);
+
+            _details = detailsTask.Result;
+            _modules = modulesTask.Result ?? [];
+
+            await LoadAnswersAsync(skipLoading: true);
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao carregar detalhes do aluno.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task LoadAnswersAsync(bool skipLoading = false)
+    {
+        if (!skipLoading)
+            _answersLoading = true;
+        try
+        {
+            var qs = $"api/v1/admin/students/{Id}/answers?take=200";
+            if (_filterModuleId.HasValue)
+                qs += $"&moduleId={_filterModuleId}";
+            if (_filterIsCorrect.HasValue)
+                qs += $"&isCorrect={_filterIsCorrect.Value.ToString().ToLowerInvariant()}";
+
+            _answers = await Http.GetFromJsonAsync<List<AdminStudentAnswerResponse>>(qs) ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao carregar respostas.";
+        }
+        finally
+        {
+            if (!skipLoading)
+                _answersLoading = false;
+        }
+    }
+
+    private async Task OnModuleFilterChanged(Guid? value)
+    {
+        _filterModuleId = value;
+        await LoadAnswersAsync();
+    }
+
+    private async Task OnCorrectFilterChanged(bool? value)
+    {
+        _filterIsCorrect = value;
+        await LoadAnswersAsync();
+    }
+
+    private static string FormatDate(DateTimeOffset? date)
+        => date?.ToLocalTime().ToString("yyyy-MM-dd") ?? "—";
+
+    private static string Truncate(string text, int maxLen)
+        => text.Length <= maxLen ? text : text[..maxLen] + "...";
+}
