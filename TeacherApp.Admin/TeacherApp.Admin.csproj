@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
-    <ProjectReference Include="..\TeacherApp.Contracts\TeacherApp.Contracts.csproj" />
+    <ProjectReference Include="..\..\TeacherAppApi\TeacherApp.Contracts\TeacherApp.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
