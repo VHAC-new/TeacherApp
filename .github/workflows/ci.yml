@@ -7,7 +7,7 @@ on:
     branches: [main, develop]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,7 +17,14 @@ jobs:
           dotnet-version: "9.0.x"
 
       - name: Restore
-        run: dotnet restore TeacherApp.Admin/TeacherApp.Admin.csproj
+        run: |
+          dotnet restore TeacherApp.Tests/TeacherApp.Tests.csproj
+          dotnet restore TeacherApp.Admin/TeacherApp.Admin.csproj
 
       - name: Build
-        run: dotnet build TeacherApp.Admin/TeacherApp.Admin.csproj -c Release --no-restore
+        run: |
+          dotnet build TeacherApp.Tests/TeacherApp.Tests.csproj -c Release --no-restore
+          dotnet build TeacherApp.Admin/TeacherApp.Admin.csproj -c Release --no-restore
+
+      - name: Test
+        run: dotnet test TeacherApp.Tests/TeacherApp.Tests.csproj -c Release --no-build --verbosity normal
