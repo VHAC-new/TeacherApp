@@ -18,7 +18,7 @@ TeacherApp.sln
 - Decisões-chave:
   - **API centraliza** regra de negócio.
   - **PostgreSQL + EF Core + Migrations** para persistência.
-  - **JWT + Roles** (`Student`, `Teacher`, `Admin`) para autenticação/autorização.
+  - **JWT + Roles** (`Student`, `Admin`) para autenticação/autorização (painel Admin só **Admin**; alunos usam **Student** no mobile).
   - **Áudios no S3** (não no banco). O banco guarda apenas metadados e `file_key`.
 
 ## 2) Ordem recomendada de implementação (incremental)
@@ -52,11 +52,11 @@ Data
 ### 2.3 Segurança (JWT + Roles)
 
 - Guia: [backend/seguranca.md](backend/seguranca.md)
-- Roles: `Student`, `Teacher`, `Admin`
-- Uso:
+- Roles: `Student`, `Admin` — ver [backend/seguranca.md](backend/seguranca.md).
+- Uso (exemplo painel admin na API):
 
 ```csharp
-[Authorize(Roles = "Teacher,Admin")]
+[Authorize(Roles = "Admin")]
 ```
 
 ### 2.4 Storage de áudio (S3)
