@@ -13,6 +13,12 @@
         <MudText Typo="Typo.h4">Student Performance</MudText>
         <MudText Typo="Typo.body2" Color="Color.Secondary">Monitor student activity and review their answers</MudText>
     </div>
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.PersonAdd"
+               OnClick="@(() => Navigation.NavigateTo("/students/new"))">
+        New Student
+    </MudButton>
 </MudStack>
 
 <div class="mb-4" style="width:100%; display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px;">
@@ -59,11 +65,11 @@ else
                     <div class="d-flex align-center gap-3">
                         <MudAvatar Color="Color.Primary" Size="Size.Medium"
                                    Style="font-size: 0.85rem; font-weight: 600;">
-                            @StudentDisplay.GetInitials(context.Name, context.Email)
+                            @StudentDisplay.GetInitials(context.FullName, context.Email)
                         </MudAvatar>
                         <div>
                             <MudText Typo="Typo.body1" Style="font-weight:500;">
-                                @StudentDisplay.GetDisplayName(context.Name, context.Email)
+                                @StudentDisplay.GetDisplayName(context.FullName, context.Email)
                             </MudText>
                         </div>
                     </div>
@@ -120,7 +126,7 @@ else
     private List<AdminStudentPerformanceResponse> FilteredStudents =>
         _students
             .Where(s => string.IsNullOrWhiteSpace(_searchTerm)
-                || StudentDisplay.GetDisplayName(s.Name, s.Email)
+                || StudentDisplay.GetDisplayName(s.FullName, s.Email)
                     .Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
                 || s.Email.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
             .ToList();

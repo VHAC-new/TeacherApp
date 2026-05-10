@@ -1,0 +1,228 @@
+@page "/students/new"
+@attribute [Authorize]
+
+@using System.Net.Http.Json
+@using System.Text.Json
+@using TeacherApp.Contracts.Admin
+
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>New Student — TeacherApp Admin</PageTitle>
+
+<MudButton Variant="Variant.Text"
+           Color="Color.Default"
+           StartIcon="@Icons.Material.Filled.ArrowBack"
+           Class="mb-2"
+           OnClick="@(() => Navigation.NavigateTo("/students"))">
+    Back to Students
+</MudButton>
+
+<MudPaper Class="pa-6 rounded-xl" Style="border: 1px solid var(--mud-palette-lines-default);" Elevation="0">
+    <div class="d-flex align-center gap-2 mb-2">
+        <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Color="Color.Primary" />
+        <MudText Typo="Typo.h5" Style="font-weight:600;">New Student Registration</MudText>
+    </div>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+        Fill in the student information below.
+    </MudText>
+
+    <MudForm @ref="_form" @bind-IsValid="@_isValid">
+        <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600;">Personal information</MudText>
+        <MudGrid Spacing="3" Class="mb-6">
+            <MudItem xs="12">
+                <MudTextField T="string"
+                              @bind-Value="_email"
+                              Label="Email *"
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              RequiredError="Email is required"
+                              InputType="InputType.Email"
+                              Immediate="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField T="string"
+                              @bind-Value="_fullName"
+                              Label="Full Name *"
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              RequiredError="Full name is required"
+                              Placeholder="Enter student's full name" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string"
+                              @bind-Value="_cpf"
+                              Label="CPF *"
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              Placeholder="000.000.000-00"
+                              HelperText="11 digits; punctuation is ignored" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string"
+                              @bind-Value="_birthDate"
+                              Label="Date of Birth *"
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              Placeholder="yyyy-MM-dd"
+                              HelperText="Format: yyyy-MM-dd" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string"
+                              @bind-Value="_phone"
+                              Label="Phone *"
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              Placeholder="(00) 00000-0000" />
+            </MudItem>
+        </MudGrid>
+
+        <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600;">Address</MudText>
+        <MudGrid Spacing="3" Class="mb-6">
+            <MudItem xs="12" sm="4">
+                <MudTextField T="string"
+                              @bind-Value="_postalCode"
+                              Label="CEP *"
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              Placeholder="00000-000" />
+            </MudItem>
+            <MudItem xs="12" sm="8">
+                <MudTextField T="string"
+                              @bind-Value="_address"
+                              Label="Full Address *"
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              Placeholder="Street, number, neighborhood, city, state" />
+            </MudItem>
+        </MudGrid>
+
+        <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600;">Course information</MudText>
+        <MudGrid Spacing="3" Class="mb-6">
+            <MudItem xs="12">
+                <MudSelect T="string"
+                           @bind-Value="_course"
+                           Label="Course *"
+                           Variant="Variant.Outlined"
+                           Required="true"
+                           Placeholder="Select a course">
+                    <MudSelectItem Value="@("Inglês")">Inglês</MudSelectItem>
+                    <MudSelectItem Value="@("Espanhol")">Espanhol</MudSelectItem>
+                    <MudSelectItem Value="@("Francês")">Francês</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </MudForm>
+
+    @if (!string.IsNullOrEmpty(_apiError))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@_apiError</MudAlert>
+    }
+
+    <div class="d-flex justify-end gap-2">
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Default"
+                   Disabled="_saving"
+                   OnClick="@(() => Navigation.NavigateTo("/students"))">
+            Cancel
+        </MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@(_saving ? null : Icons.Material.Filled.Save)"
+                   Disabled="_saving"
+                   OnClick="SaveAsync">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            }
+            else
+            {
+                <span>Save Student</span>
+            }
+        </MudButton>
+    </div>
+</MudPaper>
+
+@code {
+    private MudForm _form = null!;
+    private bool _isValid;
+    private bool _saving;
+    private string? _apiError;
+
+    private string _email = "";
+    private string _fullName = "";
+    private string _cpf = "";
+    private string _birthDate = "";
+    private string _phone = "";
+    private string _postalCode = "";
+    private string _address = "";
+    private string _course = "Inglês";
+
+    private async Task SaveAsync()
+    {
+        _apiError = null;
+        await _form.ValidateAsync();
+        if (!_isValid)
+            return;
+
+        if (!DateOnly.TryParse(_birthDate, out var birth))
+        {
+            _apiError = "Invalid date of birth. Use yyyy-MM-dd.";
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var request = new CreateStudentRequest(
+                _email.Trim(),
+                _fullName.Trim(),
+                _cpf,
+                birth,
+                _phone.Trim(),
+                _postalCode.Trim(),
+                _address.Trim(),
+                _course);
+
+            var response = await Http.PostAsJsonAsync("api/v1/admin/students", request);
+            if (response.IsSuccessStatusCode)
+            {
+                var created = await response.Content.ReadFromJsonAsync<CreateStudentResponse>();
+                if (created is not null)
+                {
+                    Navigation.NavigateTo($"/students/{created.UserId}");
+                    return;
+                }
+            }
+
+            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest
+                || response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                try
+                {
+                    using var stream = await response.Content.ReadAsStreamAsync();
+                    using var doc = await JsonDocument.ParseAsync(stream);
+                    if (doc.RootElement.TryGetProperty("error", out var err))
+                    {
+                        _apiError = err.GetString() ?? response.ReasonPhrase;
+                        return;
+                    }
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
+
+            _apiError = $"Could not save ({(int)response.StatusCode}).";
+        }
+        catch (HttpRequestException)
+        {
+            _apiError = "Could not connect to the API.";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

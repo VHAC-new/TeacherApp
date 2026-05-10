@@ -31,15 +31,49 @@ else
         <div class="d-flex align-center gap-4">
             <MudAvatar Color="Color.Primary" Size="Size.Large"
                        Style="width:56px; height:56px; font-size:1.2rem; font-weight:600;">
-                @StudentDisplay.GetInitials(_details.Name, _details.Email)
+                @StudentDisplay.GetInitials(_details.FullName, _details.Email)
             </MudAvatar>
             <div>
                 <MudText Typo="Typo.h5" Style="font-weight:600;">
-                    @StudentDisplay.GetDisplayName(_details.Name, _details.Email)
+                    @StudentDisplay.GetDisplayName(_details.FullName, _details.Email)
                 </MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">@_details.Email</MudText>
             </div>
         </div>
+    </MudPaper>
+
+    <MudPaper Class="pa-6 rounded-xl mb-4" Style="border: 1px solid var(--mud-palette-lines-default);" Elevation="0">
+        <MudText Typo="Typo.h6" Class="mb-4">Student profile</MudText>
+        <MudGrid Spacing="3">
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">CPF</MudText>
+                <MudText Typo="Typo.body1">@FormatCpfDisplay(_details.Cpf)</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Date of birth</MudText>
+                <MudText Typo="Typo.body1">@(_details.BirthDate?.ToString("yyyy-MM-dd") ?? "—")</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Phone</MudText>
+                <MudText Typo="Typo.body1">@_details.Phone</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Account status</MudText>
+                <MudText Typo="Typo.body1">@(_details.IsActive ? "Active" : "Inactive")</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">CEP</MudText>
+                <MudText Typo="Typo.body1">@_details.PostalCode</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="8">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Address</MudText>
+                <MudText Typo="Typo.body1">@_details.Address</MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Course</MudText>
+                <MudText Typo="Typo.body1">@_details.Course</MudText>
+            </MudItem>
+        </MudGrid>
     </MudPaper>
 
     <MudGrid Spacing="4" Class="mb-4">
@@ -276,6 +310,14 @@ else
 
     private static string FormatDate(DateTimeOffset? date)
         => date?.ToLocalTime().ToString("yyyy-MM-dd") ?? "—";
+
+    private static string FormatCpfDisplay(string digits)
+    {
+        if (string.IsNullOrWhiteSpace(digits) || digits.Length != 11)
+            return digits;
+
+        return $"{digits[..3]}.{digits.Substring(3, 3)}.{digits.Substring(6, 3)}-{digits.Substring(9, 2)}";
+    }
 
     private static string Truncate(string text, int maxLen)
         => text.Length <= maxLen ? text : text[..maxLen] + "...";

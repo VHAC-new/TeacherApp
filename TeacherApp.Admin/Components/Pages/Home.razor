@@ -110,7 +110,12 @@ else
                     <MudTh>Concluída em</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="Aluno">@context.StudentEmail</MudTd>
+                    <MudTd DataLabel="Aluno">
+                        <div>
+                            <MudText Typo="Typo.body2" Style="font-weight:500;">@context.StudentFullName</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.StudentEmail</MudText>
+                        </div>
+                    </MudTd>
                     <MudTd DataLabel="Módulo">@context.ModuleTitle</MudTd>
                     <MudTd DataLabel="Lição">@context.LessonTitle</MudTd>
                     <MudTd DataLabel="Concluída em">@FormatCompletedAt(context.CompletedAt)</MudTd>
