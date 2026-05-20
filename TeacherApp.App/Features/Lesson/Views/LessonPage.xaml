@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:vm="clr-namespace:TeacherApp.App.Features.Lesson.ViewModels"
+             xmlns:contracts="clr-namespace:TeacherApp.Contracts.Exercises;assembly=TeacherApp.Contracts"
+             x:Class="TeacherApp.App.Features.Lesson.Views.LessonPage"
+             x:DataType="vm:LessonViewModel"
+             Title="{Binding Title}">
+
+    <RefreshView IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
+        <ScrollView>
+            <VerticalStackLayout Spacing="16" Padding="16">
+
+                <VerticalStackLayout Spacing="8" IsVisible="{Binding HasLessonAudio}">
+                    <Label Text="Áudio da lição" FontSize="18" FontAttributes="Bold" />
+                    <ActivityIndicator IsRunning="{Binding IsAudioLoading}" IsVisible="{Binding IsAudioLoading}" />
+                    <Label Text="{Binding AudioLoadError}" TextColor="Red" FontSize="13"
+                           IsVisible="{Binding AudioLoadError, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
+                    <toolkit:MediaElement Source="{Binding LessonAudioUri}"
+                                          HeightRequest="72"
+                                          ShouldAutoPlay="False"
+                                          ShouldShowPlaybackControls="True" />
+                </VerticalStackLayout>
+
+                <Label Text="Exercícios" FontSize="24" FontAttributes="Bold" />
+
+                <Label Text="{Binding Error}" TextColor="Red" FontSize="14"
+                       IsVisible="{Binding Error, Converter={StaticResource IsNotNullConverter}}" />
+
+                <CollectionView ItemsSource="{Binding Exercises}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="contracts:ExerciseStudentResponse">
+                            <Frame Padding="16" Margin="0,0,0,8" CornerRadius="12"
+                                   BorderColor="{StaticResource Gray200}" HasShadow="True"
+                                   BackgroundColor="White">
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LessonViewModel}}, Path=NavigateToExerciseCommand}"
+                                        CommandParameter="{Binding .}" />
+                                </Frame.GestureRecognizers>
+                                <HorizontalStackLayout Spacing="12">
+                                    <Frame WidthRequest="40" HeightRequest="40" CornerRadius="20"
+                                           BackgroundColor="{StaticResource Primary}" Padding="0"
+                                           HasShadow="False">
+                                        <Label Text="{Binding Order}" TextColor="White"
+                                               HorizontalOptions="Center" VerticalOptions="Center"
+                                               FontAttributes="Bold" />
+                                    </Frame>
+                                    <Label Text="{Binding Prompt}" FontSize="16"
+                                           VerticalOptions="Center"
+                                           LineBreakMode="TailTruncation" MaxLines="2" />
+                                </HorizontalStackLayout>
+                            </Frame>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                    <CollectionView.EmptyView>
+                        <Label Text="Nenhum exercício nesta lição." TextColor="{StaticResource Gray400}"
+                               HorizontalOptions="Center" Margin="0,40,0,0" />
+                    </CollectionView.EmptyView>
+                </CollectionView>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

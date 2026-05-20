@@ -1,8 +1,20 @@
 ﻿using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
-using TeacherApp.App.Services;
-using TeacherApp.App.ViewModels;
-using TeacherApp.App.Views;
+using TeacherApp.App.Core.Services;
+using TeacherApp.App.Features.Exercise.Services;
+using TeacherApp.App.Features.Exercise.ViewModels;
+using TeacherApp.App.Features.Exercise.Views;
+using TeacherApp.App.Features.Home.Services;
+using TeacherApp.App.Features.Home.ViewModels;
+using TeacherApp.App.Features.Home.Views;
+using TeacherApp.App.Features.Lesson.Services;
+using TeacherApp.App.Features.Lesson.ViewModels;
+using TeacherApp.App.Features.Lesson.Views;
+using TeacherApp.App.Features.Login.Services;
+using TeacherApp.App.Features.Login.ViewModels;
+using TeacherApp.App.Features.Login.Views;
+using TeacherApp.App.Features.Module.ViewModels;
+using TeacherApp.App.Features.Module.Views;
 
 namespace TeacherApp.App;
 

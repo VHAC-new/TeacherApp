@@ -2,20 +2,49 @@
 
 ## Padrão
 
-O app utiliza **MVVM (Model-View-ViewModel)** com **CommunityToolkit.Mvvm**.
+O app utiliza **MVVM (Model-View-ViewModel)** com **CommunityToolkit.Mvvm** e organização por **Feature Folders**.
 
 ---
 
-## Estrutura interna sugerida
+## Estrutura (Feature Folders)
+
+Cada funcionalidade fica em `Features/{NomeDaFeature}/`, com subpastas conforme necessidade:
 
 ```text
-/App
- ├─ Views
- ├─ ViewModels
- ├─ Models
- ├─ Services
- └─ Resources
+TeacherApp.App/
+ ├─ Converters/              → conversores XAML partilhados
+ ├─ Core/
+ │   └─ Services/            → infra e serviços usados por várias features (HTTP, catálogo)
+ └─ Features/
+     ├─ Login/
+     │   ├─ Services/
+     │   ├─ ViewModels/
+     │   └─ Views/
+     ├─ Home/
+     │   ├─ Components/       → UI reutilizável da feature (quando existir)
+     │   ├─ Popups/           → popups/modais da feature (quando existir)
+     │   ├─ Services/
+     │   ├─ ViewModels/
+     │   └─ Views/
+     ├─ Module/
+     │   ├─ ViewModels/
+     │   └─ Views/
+     ├─ Lesson/
+     │   ├─ Services/
+     │   ├─ ViewModels/
+     │   └─ Views/
+     └─ Exercise/
+         ├─ Services/
+         ├─ ViewModels/
+         └─ Views/
 ```
+
+**Regras:**
+
+* Código usado por **uma** feature → pasta dentro dessa feature.
+* Código usado por **várias** features → `Core/Services` (ou `Core/` para outros tipos no futuro).
+* Namespaces seguem a pasta: `TeacherApp.App.Features.Home.ViewModels`, etc.
+* Novas telas: criar pasta em `Features/{Feature}/` com `Views` e `ViewModels` (e `Services` se for exclusivo da feature).
 
 ---
 
@@ -46,7 +75,7 @@ O app utiliza **MVVM (Model-View-ViewModel)** com **CommunityToolkit.Mvvm**.
 ## Services
 
 * Consumo da API (HTTP)
-* Autenticação (JWT)
+* Autenticação (JWT) na feature **Login**; token partilhado em **Core**
 * Abstração de chamadas remotas
 
 ---
@@ -60,6 +89,8 @@ O app utiliza **MVVM (Model-View-ViewModel)** com **CommunityToolkit.Mvvm**.
 ### Exemplo
 
 ```csharp
+namespace TeacherApp.App.Features.Home.ViewModels;
+
 public partial class HomeViewModel : ObservableObject
 {
     [ObservableProperty]

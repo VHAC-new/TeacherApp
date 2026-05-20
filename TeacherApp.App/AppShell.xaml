@@ -3,19 +3,20 @@
     x:Class="TeacherApp.App.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:views="clr-namespace:TeacherApp.App.Views"
+    xmlns:login="clr-namespace:TeacherApp.App.Features.Login.Views"
+    xmlns:home="clr-namespace:TeacherApp.App.Features.Home.Views"
     Title="TeacherApp"
     Shell.FlyoutBehavior="Disabled">
 
     <ShellContent
         Title="Login"
-        ContentTemplate="{DataTemplate views:LoginPage}"
+        ContentTemplate="{DataTemplate login:LoginPage}"
         Route="login"
         Shell.NavBarIsVisible="False" />
 
     <ShellContent
         Title="Início"
-        ContentTemplate="{DataTemplate views:HomePage}"
+        ContentTemplate="{DataTemplate home:HomePage}"
         Route="home" />
 
 </Shell>
