@@ -25,6 +25,10 @@ O assembly **TeacherApp.Contracts** é referenciado pela API, pelo app MAUI e pe
 
 ---
 
+## App MAUI — organização
+
+O projeto **TeacherApp.App** usa **Feature Folders** (`Features/{Feature}/Views`, `ViewModels`, `Services`, …) e **Core** para serviços partilhados. Ver [app-mobile-mvvm.md](../frontend/app-mobile-mvvm.md).
+
 ## Estado do repositório
 
-Até existir código (`.sln` / `.csproj` no repositório), esta estrutura é a **especificação alvo**; ao criar a solution, validar que coincide com esta lista.
+A API e os contratos vivem em repositório separado (`TeacherAppApi`); ver [caminho-projeto-api.md](../backend/caminho-projeto-api.md). A solution `TeacherApp.sln` no repositório atual contém **Admin** e **App**.

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:TeacherApp.App.Features.Exercise.ViewModels"
+             x:Class="TeacherApp.App.Features.Exercise.Views.ExercisePage"
+             x:DataType="vm:ExerciseViewModel"
+             Title="Exercício">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="20" Padding="20">
+
+            <Frame Padding="20" CornerRadius="12" BackgroundColor="{StaticResource Secondary}"
+                   BorderColor="Transparent" HasShadow="False">
+                <Label Text="{Binding Prompt}" FontSize="18" />
+            </Frame>
+
+            <Label Text="{Binding Hint, StringFormat='Dica: {0}'}"
+                   FontSize="14" TextColor="{StaticResource Gray500}" FontAttributes="Italic"
+                   IsVisible="{Binding Hint, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
+
+            <Entry Placeholder="Sua resposta"
+                   Text="{Binding Answer}"
+                   ReturnType="Send"
+                   IsEnabled="{Binding Submitted, Converter={StaticResource InvertedBoolConverter}}"
+                   FontSize="18" />
+
+            <Label Text="{Binding Error}" TextColor="Red" FontSize="14"
+                   IsVisible="{Binding Error, Converter={StaticResource IsNotNullConverter}}" />
+
+            <!-- Result -->
+            <Frame IsVisible="{Binding Submitted}" Padding="16" CornerRadius="12"
+                   HasShadow="False" BorderColor="Transparent">
+                <Frame.Triggers>
+                    <DataTrigger TargetType="Frame" Binding="{Binding IsCorrect}" Value="True">
+                        <Setter Property="BackgroundColor" Value="#D4EDDA" />
+                    </DataTrigger>
+                    <DataTrigger TargetType="Frame" Binding="{Binding IsCorrect}" Value="False">
+                        <Setter Property="BackgroundColor" Value="#F8D7DA" />
+                    </DataTrigger>
+                </Frame.Triggers>
+                <VerticalStackLayout Spacing="8">
+                    <Label FontSize="20" FontAttributes="Bold">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsCorrect}" Value="True">
+                                <Setter Property="Text" Value="Correto!" />
+                                <Setter Property="TextColor" Value="#155724" />
+                            </DataTrigger>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsCorrect}" Value="False">
+                                <Setter Property="Text" Value="Incorreto" />
+                                <Setter Property="TextColor" Value="#721C24" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                    <Label Text="{Binding Explanation}" FontSize="14"
+                           IsVisible="{Binding Explanation, Converter={StaticResource IsNotNullConverter}}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <Button Text="Enviar Resposta"
+                    Command="{Binding SubmitCommand}"
+                    IsVisible="{Binding Submitted, Converter={StaticResource InvertedBoolConverter}}"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"
+                    BackgroundColor="{StaticResource Primary}"
+                    TextColor="White"
+                    FontAttributes="Bold"
+                    HeightRequest="50"
+                    CornerRadius="10" />
+
+            <Button Text="Voltar"
+                    Command="{Binding GoBackCommand}"
+                    IsVisible="{Binding Submitted}"
+                    BackgroundColor="{StaticResource Tertiary}"
+                    TextColor="White"
+                    HeightRequest="50"
+                    CornerRadius="10" />
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                               Color="{StaticResource Primary}" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

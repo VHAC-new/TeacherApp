@@ -2,13 +2,13 @@
 
 ## Arquitetura
 
-MVVM — detalhes, CommunityToolkit e fluxo View → ViewModel → Service em [app-mobile-mvvm.md](app-mobile-mvvm.md).
+MVVM com **Feature Folders** — detalhes em [app-mobile-mvvm.md](app-mobile-mvvm.md).
 
 ---
 
 ## Suporte para tema Claro/Escuro
 
-**Requisito:** nas plataformas **Android** e **iOS** , a app deve respeitar **tema claro e tema escuro**: seguir a preferência do sistema ou permitir um override explícito na aplicação, mantendo contraste e legibilidade em todas as telas.
+**Requisito:** nas plataformas **Android** e **iOS**, a app deve respeitar **tema claro e tema escuro**: seguir a preferência do sistema ou permitir um override explícito na aplicação, mantendo contraste e legibilidade em todas as telas.
 
 **Abordagem recomendada (.NET MAUI):**
 
@@ -17,30 +17,37 @@ MVVM — detalhes, CommunityToolkit e fluxo View → ViewModel → Service em [a
 * **Android:** o modo escuro do dispositivo é refletido no tema da app quando os recursos estão preparados para `Dark` / `Light`; validar em dispositivos ou emuladores com “tema escuro” ativado nas definições.
 * **iOS:** garantir que a app declara suporte à aparência dinâmica conforme a [documentação Microsoft para MAUI / iOS](https://learn.microsoft.com/dotnet/maui/user-interface/system-theme-changes) (incluindo `Info.plist` e comportamento em modo escuro do sistema); testar no simulador com aparência clara/escura.
 
-**Arquitetura:** o tema é responsabilidade da **camada de UI e recursos**, não dos ViewModels — ver [app-mobile-mvvm.md](app-mobile-mvvm.md) para manter lógica de ecrã separada de cores e estilos.
+**Arquitetura:** o tema é responsabilidade da **camada de UI e recursos**, não dos ViewModels — ver [app-mobile-mvvm.md](app-mobile-mvvm.md).
 
 ---
 
-## Estrutura
+## Estrutura (Feature Folders)
 
 ```text
-Views
-ViewModels
-Models
-Services
-Platforms
+TeacherApp.App/
+ ├─ Converters/
+ ├─ Core/Services/          → partilhado (TokenStore, CatalogService, …)
+ └─ Features/
+     ├─ Login/
+     ├─ Home/
+     ├─ Module/
+     ├─ Lesson/
+     └─ Exercise/
 ```
+
+Cada feature pode conter `Components`, `Popups`, `Services`, `ViewModels` e `Views` conforme necessário (ver [app-mobile-mvvm.md](app-mobile-mvvm.md)).
 
 ---
 
-## Telas
+## Telas (features)
 
-* Login
-* Home
-* Module
-* Lesson
-* Exercise
-* Result
+| Feature   | Tela principal        |
+|-----------|------------------------|
+| Login     | Login                  |
+| Home      | Home (lista de módulos)|
+| Module    | Module (lições)        |
+| Lesson    | Lesson (áudio + exercícios) |
+| Exercise  | Exercise, FinalExercises |
 
 ---
 

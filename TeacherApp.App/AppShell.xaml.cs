@@ -1,4 +1,6 @@
-﻿using TeacherApp.App.Views;
+﻿using TeacherApp.App.Features.Exercise.Views;
+using TeacherApp.App.Features.Lesson.Views;
+using TeacherApp.App.Features.Module.Views;
 
 namespace TeacherApp.App;
 

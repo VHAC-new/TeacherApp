@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:TeacherApp.App.Features.Login.ViewModels"
+             x:Class="TeacherApp.App.Features.Login.Views.LoginPage"
+             x:DataType="vm:LoginViewModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{StaticResource White}">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="20" Padding="30" VerticalOptions="Center">
+
+            <Label Text="TeacherApp"
+                   FontSize="32"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   TextColor="{StaticResource Primary}" />
+
+            <Label Text="Faça login para continuar"
+                   FontSize="16"
+                   HorizontalOptions="Center"
+                   TextColor="{StaticResource Gray400}" />
+
+            <Entry Placeholder="E-mail"
+                   Text="{Binding Email}"
+                   Keyboard="Email"
+                   ReturnType="Next" />
+
+            <Entry Placeholder="Senha"
+                   Text="{Binding Password}"
+                   IsPassword="True"
+                   ReturnType="Done" />
+
+            <Label Text="{Binding Error}"
+                   TextColor="Red"
+                   FontSize="14"
+                   IsVisible="{Binding Error, Converter={StaticResource IsNotNullConverter}}" />
+
+            <Button Text="Entrar"
+                    Command="{Binding LoginCommand}"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"
+                    BackgroundColor="{StaticResource Primary}"
+                    TextColor="White"
+                    FontAttributes="Bold"
+                    HeightRequest="50"
+                    CornerRadius="10" />
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               Color="{StaticResource Primary}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
