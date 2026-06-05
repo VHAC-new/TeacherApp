@@ -1,15 +1,20 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using TeacherApp.App.Core;
 using TeacherApp.App.Core.Services;
-using TeacherApp.Contracts.Lessons;
+using TeacherApp.App.Features.Home.Services;
+using TeacherApp.App.Features.Module.Models;
 
 namespace TeacherApp.App.Features.Module.ViewModels;
 
 [QueryProperty(nameof(ModuleId), "moduleId")]
 [QueryProperty(nameof(Title), "title")]
-public partial class ModuleViewModel(CatalogService catalog) : ObservableObject
+public partial class ModuleViewModel(CatalogService catalog, ProgressService progress) : ObservableObject, ICleanup
 {
+    private CancellationTokenSource? _cts;
+    private string? _loadedModuleId;
+
     [ObservableProperty]
     private string _moduleId = "";
 
@@ -22,38 +27,85 @@ public partial class ModuleViewModel(CatalogService catalog) : ObservableObject
     [ObservableProperty]
     private string? _error;
 
-    public ObservableCollection<LessonResponse> Lessons { get; } = [];
+    [ObservableProperty]
+    private int _completedLessons;
+
+    [ObservableProperty]
+    private int _totalLessons;
+
+    [ObservableProperty]
+    private double _progressPercent;
+
+    [ObservableProperty]
+    private string _progressText = "";
+
+    public ObservableCollection<LessonWithProgress> Lessons { get; } = [];
 
     [RelayCommand]
     private async Task LoadAsync()
     {
-        if (!Guid.TryParse(ModuleId, out var id)) return;
+        if (!Guid.TryParse(ModuleId, out var id))
+            return;
+
+        if (Lessons.Count > 0 && _loadedModuleId == ModuleId)
+            return;
+
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        var ct = _cts.Token;
 
         IsBusy = true;
         Error = null;
 
         try
         {
-            var lessons = await catalog.GetLessonsAsync(id);
+            var lessonsTask = catalog.GetLessonsAsync(id, ct);
+            var progressTask = progress.GetLessonProgressAsync(id, ct);
+
+            await Task.WhenAll(lessonsTask, progressTask);
+            if (ct.IsCancellationRequested) return;
+
+            var lessons = lessonsTask.Result;
+            var lessonProgress = progressTask.Result;
+
+            var progressMap = lessonProgress.ToDictionary(p => p.LessonId);
+
             Lessons.Clear();
-            foreach (var l in lessons) Lessons.Add(l);
+            bool previousCompleted = true;
+            foreach (var lesson in lessons.OrderBy(l => l.Order))
+            {
+                progressMap.TryGetValue(lesson.Id, out var lp);
+                bool isLocked = !previousCompleted;
+                Lessons.Add(new LessonWithProgress(lesson, lp, isLocked));
+                previousCompleted = lp?.IsCompleted ?? false;
+            }
+
+            TotalLessons = Lessons.Count;
+            CompletedLessons = Lessons.Count(l => l.IsCompleted);
+            ProgressPercent = TotalLessons > 0 ? (double)CompletedLessons / TotalLessons : 0;
+            ProgressText = $"{CompletedLessons} of {TotalLessons} lessons completed";
+            _loadedModuleId = ModuleId;
         }
+        catch (OperationCanceledException) { }
         catch (HttpRequestException)
         {
             Error = "Erro ao carregar lições.";
         }
         finally
         {
-            IsBusy = false;
+            if (!ct.IsCancellationRequested)
+                IsBusy = false;
         }
     }
 
     [RelayCommand]
-    private async Task NavigateToLesson(LessonResponse lesson)
+    private async Task NavigateToLesson(LessonWithProgress lesson)
     {
+        var desc = Uri.EscapeDataString(lesson.Description ?? "");
         var audio = lesson.AudioMediaId is { } aid ? $"&audioMediaId={aid}" : "";
         await Shell.Current.GoToAsync(
-            $"lesson?moduleId={ModuleId}&lessonId={lesson.Id}&title={Uri.EscapeDataString(lesson.Title)}{audio}");
+            $"lesson?moduleId={ModuleId}&lessonId={lesson.Id}&title={Uri.EscapeDataString(lesson.Title)}&description={desc}{audio}");
     }
 
     [RelayCommand]
@@ -61,5 +113,13 @@ public partial class ModuleViewModel(CatalogService catalog) : ObservableObject
     {
         await Shell.Current.GoToAsync(
             $"final-exercises?moduleId={ModuleId}&title={Uri.EscapeDataString(Title)}");
+    }
+
+    public void Cleanup()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
+        IsBusy = false;
     }
 }

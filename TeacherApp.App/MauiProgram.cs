@@ -15,6 +15,8 @@ using TeacherApp.App.Features.Login.ViewModels;
 using TeacherApp.App.Features.Login.Views;
 using TeacherApp.App.Features.Module.ViewModels;
 using TeacherApp.App.Features.Module.Views;
+using TeacherApp.App.Features.Profile.ViewModels;
+using TeacherApp.App.Features.Profile.Views;
 
 namespace TeacherApp.App;
 
@@ -35,7 +37,9 @@ public static class MauiProgram
 
         var apiBaseUrl =
 #if ANDROID
-            "http://10.0.2.2:5092";
+            //"http://10.0.2.2:5092";
+        //Celular Fisico
+        "http://192.168.0.131:5092";
 #else
             "http://localhost:5092";
 #endif
@@ -60,17 +64,23 @@ public static class MauiProgram
 
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<HomeViewModel>();
+        builder.Services.AddTransient<LessonsViewModel>();
+        builder.Services.AddTransient<ProfileViewModel>();
         builder.Services.AddTransient<ModuleViewModel>();
         builder.Services.AddTransient<LessonViewModel>();
         builder.Services.AddTransient<ExerciseViewModel>();
         builder.Services.AddTransient<FinalExercisesViewModel>();
+        builder.Services.AddTransient<ResultsViewModel>();
 
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<HomePage>();
+        builder.Services.AddTransient<LessonsPage>();
+        builder.Services.AddTransient<ProfilePage>();
         builder.Services.AddTransient<ModulePage>();
         builder.Services.AddTransient<LessonPage>();
         builder.Services.AddTransient<ExercisePage>();
         builder.Services.AddTransient<FinalExercisesPage>();
+        builder.Services.AddTransient<ResultsPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();

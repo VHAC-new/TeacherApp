@@ -18,7 +18,7 @@
                        HorizontalOptions="Center" TextColor="{StaticResource Primary}" />
                 <Label FontSize="20" HorizontalOptions="Center"
                        Text="{Binding CorrectCount, StringFormat='Acertos: {0}'}" />
-                <Button Text="Voltar" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FinalExercisesViewModel}}, Path=LoadCommand}"
+                <Button Text="Voltar" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FinalExercisesViewModel}}, Path=GoBackCommand}"
                         BackgroundColor="{StaticResource Tertiary}" TextColor="White"
                         HeightRequest="50" CornerRadius="10" />
             </VerticalStackLayout>

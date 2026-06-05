@@ -6,6 +6,8 @@ namespace TeacherApp.App.Features.Login.ViewModels;
 
 public partial class LoginViewModel(AuthService authService) : ObservableObject
 {
+    private CancellationTokenSource? _cts;
+
     [ObservableProperty]
     private string _email = "";
 
@@ -27,13 +29,25 @@ public partial class LoginViewModel(AuthService authService) : ObservableObject
             return;
         }
 
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        var ct = _cts.Token;
+
         IsBusy = true;
         Error = null;
 
         try
         {
-            await authService.LoginAsync(Email, Password);
+            await authService.LoginAsync(Email, Password, ct);
+            if (ct.IsCancellationRequested)
+                return;
+
             await Shell.Current.GoToAsync("//home");
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignorado se a operação foi cancelada.
         }
         catch (HttpRequestException)
         {
@@ -47,7 +61,8 @@ public partial class LoginViewModel(AuthService authService) : ObservableObject
         }
         finally
         {
-            IsBusy = false;
+            if (!ct.IsCancellationRequested)
+                IsBusy = false;
         }
     }
 }

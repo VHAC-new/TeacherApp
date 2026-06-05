@@ -1,13 +1,13 @@
 using TeacherApp.App.Core;
-using TeacherApp.App.Features.Module.ViewModels;
+using TeacherApp.App.Features.Home.ViewModels;
 
-namespace TeacherApp.App.Features.Module.Views;
+namespace TeacherApp.App.Features.Home.Views;
 
-public partial class ModulePage : ContentPage
+public partial class LessonsPage : ContentPage
 {
-    private readonly ModuleViewModel _vm;
+    private readonly LessonsViewModel _vm;
 
-    public ModulePage(ModuleViewModel vm)
+    public LessonsPage(LessonsViewModel vm)
     {
         InitializeComponent();
         BindingContext = _vm = vm;
@@ -23,11 +23,7 @@ public partial class ModulePage : ContentPage
     {
         if (BindingContext is ICleanup cleanup)
             cleanup.Cleanup();
-        base.OnDisappearing();
-    }
 
-    private async void OnBackTapped(object? sender, EventArgs e)
-    {
-        await Shell.Current.GoToAsync("..");
+        base.OnDisappearing();
     }
 }
