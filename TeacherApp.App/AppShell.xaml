@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:login="clr-namespace:TeacherApp.App.Features.Login.Views"
     xmlns:home="clr-namespace:TeacherApp.App.Features.Home.Views"
+    xmlns:profile="clr-namespace:TeacherApp.App.Features.Profile.Views"
     Title="TeacherApp"
     Shell.FlyoutBehavior="Disabled">
 
@@ -14,9 +15,28 @@
         Route="login"
         Shell.NavBarIsVisible="False" />
 
-    <ShellContent
-        Title="Início"
-        ContentTemplate="{DataTemplate home:HomePage}"
-        Route="home" />
+    <TabBar Route="main">
+        <Tab Title="Home" Icon="tab_home.png">
+            <ShellContent
+                Title="Home"
+                ContentTemplate="{DataTemplate home:HomePage}"
+                Route="home"
+                Shell.NavBarIsVisible="False" />
+        </Tab>
+        <Tab Title="Lessons" Icon="tab_lessons.png">
+            <ShellContent
+                Title="Lessons"
+                ContentTemplate="{DataTemplate home:LessonsPage}"
+                Route="lessons"
+                Shell.NavBarIsVisible="False" />
+        </Tab>
+        <Tab Title="Profile" Icon="tab_profile.png">
+            <ShellContent
+                Title="Profile"
+                ContentTemplate="{DataTemplate profile:ProfilePage}"
+                Route="profile"
+                Shell.NavBarIsVisible="False" />
+        </Tab>
+    </TabBar>
 
 </Shell>

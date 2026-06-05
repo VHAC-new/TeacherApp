@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:TeacherApp.App.Features.Profile.ViewModels"
+             x:Class="TeacherApp.App.Features.Profile.Views.ProfilePage"
+             x:DataType="vm:ProfileViewModel"
+             Title="Profile">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="0">
+
+            <!-- Header gradiente -->
+            <Border StrokeThickness="0" Padding="24,48,24,32"
+                    StrokeShape="RoundRectangle 0,0,28,28">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="{StaticResource Primary}" Offset="0.0" />
+                        <GradientStop Color="{StaticResource Tertiary}" Offset="1.0" />
+                    </LinearGradientBrush>
+                </Border.Background>
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="My Profile" FontSize="30" FontAttributes="Bold" TextColor="White" />
+                    <Label Text="Track your progress" FontSize="16" TextColor="#E6FFFFFF" />
+                </VerticalStackLayout>
+            </Border>
+
+            <VerticalStackLayout Spacing="16" Padding="16,16,16,24">
+
+                <!-- Cartão do perfil -->
+                <Border StrokeThickness="0" Padding="20"
+                        StrokeShape="RoundRectangle 24">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="{StaticResource Primary}" Offset="0.0" />
+                            <GradientStop Color="{StaticResource Tertiary}" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                        <Border WidthRequest="72" HeightRequest="72"
+                                StrokeShape="RoundRectangle 36"
+                                BackgroundColor="#33FFFFFF" Stroke="#4DFFFFFF" StrokeThickness="3">
+                            <Label Text="👤" FontSize="34" HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding DisplayName}" FontSize="22" FontAttributes="Bold" TextColor="White" />
+                            <Label Text="{Binding Email}" FontSize="14" TextColor="#CCFFFFFF" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <!-- Ações da conta -->
+                <Border Padding="16"
+                        StrokeShape="RoundRectangle 16"
+                        Stroke="{StaticResource Gray200}" StrokeThickness="1"
+                        BackgroundColor="White">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                        <Border WidthRequest="48" HeightRequest="48"
+                                StrokeShape="RoundRectangle 14" StrokeThickness="0"
+                                BackgroundColor="{StaticResource Secondary}">
+                            <Label Text="⚙️" FontSize="22" HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="Settings" FontSize="16" FontAttributes="Bold" />
+                            <Label Text="Manage your account" FontSize="14" TextColor="{StaticResource Gray500}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <Border Padding="16"
+                        StrokeShape="RoundRectangle 16"
+                        Stroke="{StaticResource Gray200}" StrokeThickness="1"
+                        BackgroundColor="White">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding LogoutCommand}" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                        <Border WidthRequest="48" HeightRequest="48"
+                                StrokeShape="RoundRectangle 14" StrokeThickness="0"
+                                BackgroundColor="#1AEF4444">
+                            <Label Text="🚪" FontSize="22" HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="Sign Out" FontSize="16" FontAttributes="Bold" TextColor="#EF4444" />
+                            <Label Text="Come back soon!" FontSize="14" TextColor="{StaticResource Gray500}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

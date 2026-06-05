@@ -4,79 +4,133 @@
              xmlns:vm="clr-namespace:TeacherApp.App.Features.Exercise.ViewModels"
              x:Class="TeacherApp.App.Features.Exercise.Views.ExercisePage"
              x:DataType="vm:ExerciseViewModel"
-             Title="Exercício">
+             Shell.NavBarIsVisible="False">
 
-    <ScrollView>
-        <VerticalStackLayout Spacing="20" Padding="20">
+    <Grid RowDefinitions="Auto,*">
 
-            <Frame Padding="20" CornerRadius="12" BackgroundColor="{StaticResource Secondary}"
-                   BorderColor="Transparent" HasShadow="False">
-                <Label Text="{Binding Prompt}" FontSize="18" />
-            </Frame>
+        <!-- Gradient Header -->
+        <Grid Grid.Row="0" Padding="20,50,20,20" MinimumHeightRequest="140">
+            <Grid.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#512BD4" Offset="0.0" />
+                    <GradientStop Color="#2B0B98" Offset="1.0" />
+                </LinearGradientBrush>
+            </Grid.Background>
 
-            <Label Text="{Binding Hint, StringFormat='Dica: {0}'}"
-                   FontSize="14" TextColor="{StaticResource Gray500}" FontAttributes="Italic"
-                   IsVisible="{Binding Hint, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
-
-            <Entry Placeholder="Sua resposta"
-                   Text="{Binding Answer}"
-                   ReturnType="Send"
-                   IsEnabled="{Binding Submitted, Converter={StaticResource InvertedBoolConverter}}"
-                   FontSize="18" />
-
-            <Label Text="{Binding Error}" TextColor="Red" FontSize="14"
-                   IsVisible="{Binding Error, Converter={StaticResource IsNotNullConverter}}" />
-
-            <!-- Result -->
-            <Frame IsVisible="{Binding Submitted}" Padding="16" CornerRadius="12"
-                   HasShadow="False" BorderColor="Transparent">
-                <Frame.Triggers>
-                    <DataTrigger TargetType="Frame" Binding="{Binding IsCorrect}" Value="True">
-                        <Setter Property="BackgroundColor" Value="#D4EDDA" />
-                    </DataTrigger>
-                    <DataTrigger TargetType="Frame" Binding="{Binding IsCorrect}" Value="False">
-                        <Setter Property="BackgroundColor" Value="#F8D7DA" />
-                    </DataTrigger>
-                </Frame.Triggers>
-                <VerticalStackLayout Spacing="8">
-                    <Label FontSize="20" FontAttributes="Bold">
-                        <Label.Triggers>
-                            <DataTrigger TargetType="Label" Binding="{Binding IsCorrect}" Value="True">
-                                <Setter Property="Text" Value="Correto!" />
-                                <Setter Property="TextColor" Value="#155724" />
-                            </DataTrigger>
-                            <DataTrigger TargetType="Label" Binding="{Binding IsCorrect}" Value="False">
-                                <Setter Property="Text" Value="Incorreto" />
-                                <Setter Property="TextColor" Value="#721C24" />
-                            </DataTrigger>
-                        </Label.Triggers>
+            <VerticalStackLayout Spacing="14" VerticalOptions="End">
+                <HorizontalStackLayout Spacing="12">
+                    <Label Text="&#x2190;" TextColor="White" FontSize="24"
+                           VerticalOptions="Center">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnBackTapped" />
+                        </Label.GestureRecognizers>
                     </Label>
-                    <Label Text="{Binding Explanation}" FontSize="14"
-                           IsVisible="{Binding Explanation, Converter={StaticResource IsNotNullConverter}}" />
-                </VerticalStackLayout>
-            </Frame>
+                    <Label Text="Practice Exercises" TextColor="White" FontSize="20"
+                           FontAttributes="Bold" VerticalOptions="Center" />
+                </HorizontalStackLayout>
 
-            <Button Text="Enviar Resposta"
-                    Command="{Binding SubmitCommand}"
-                    IsVisible="{Binding Submitted, Converter={StaticResource InvertedBoolConverter}}"
-                    IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"
-                    BackgroundColor="{StaticResource Primary}"
-                    TextColor="White"
-                    FontAttributes="Bold"
-                    HeightRequest="50"
-                    CornerRadius="10" />
+                <Label Text="{Binding QuestionLabel}" TextColor="#FFFFFFCC" FontSize="14" />
 
-            <Button Text="Voltar"
-                    Command="{Binding GoBackCommand}"
-                    IsVisible="{Binding Submitted}"
-                    BackgroundColor="{StaticResource Tertiary}"
-                    TextColor="White"
-                    HeightRequest="50"
-                    CornerRadius="10" />
+                <!-- Segmented Progress Bar -->
+                <CollectionView ItemsSource="{Binding Segments}" HeightRequest="8"
+                                ItemsLayout="HorizontalList">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SegmentState">
+                            <Border HeightRequest="6" WidthRequest="28"
+                                    Margin="1,0" StrokeShape="RoundRectangle 3"
+                                    Stroke="Transparent"
+                                    BackgroundColor="{Binding Color}" />
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </Grid>
 
-            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
-                               Color="{StaticResource Primary}" />
+        <!-- Content -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="16" Padding="16,20,16,32">
 
-        </VerticalStackLayout>
-    </ScrollView>
+                <Label Text="{Binding Error}" TextColor="Red" FontSize="14"
+                       IsVisible="{Binding Error, Converter={StaticResource IsNotNullConverter}}" />
+
+                <!-- Question Card -->
+                <Border Padding="20" StrokeShape="RoundRectangle 14"
+                        Stroke="{StaticResource Gray200}" BackgroundColor="{StaticResource Secondary}">
+                    <Label Text="{Binding CurrentExercise.Prompt}" FontSize="18"
+                           LineBreakMode="WordWrap" />
+                </Border>
+
+                <!-- Hint -->
+                <Border Padding="16" StrokeShape="RoundRectangle 12"
+                        Stroke="Transparent" BackgroundColor="#FFF3E0"
+                        IsVisible="{Binding CurrentExercise.Hint, Converter={StaticResource IsNotNullOrEmptyConverter}}">
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="&#x1F4A1;" FontSize="16" VerticalOptions="Start" />
+                        <Label Text="{Binding CurrentExercise.Hint}" FontSize="14"
+                               TextColor="#E65100" LineBreakMode="WordWrap"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </Border>
+
+                <!-- Answer Input -->
+                <Entry Placeholder="Type your answer..."
+                       Text="{Binding Answer}"
+                       ReturnType="Send"
+                       FontSize="16"
+                       IsEnabled="{Binding LastResult, Converter={StaticResource IsNullConverter}}" />
+
+                <!-- Result Feedback -->
+                <Border IsVisible="{Binding LastResult, Converter={StaticResource IsNotNullConverter}}"
+                        Padding="16" StrokeShape="RoundRectangle 12"
+                        Stroke="Transparent">
+                    <Border.Triggers>
+                        <DataTrigger TargetType="Border" Binding="{Binding LastResult}" Value="True">
+                            <Setter Property="BackgroundColor" Value="#E8F5E9" />
+                        </DataTrigger>
+                        <DataTrigger TargetType="Border" Binding="{Binding LastResult}" Value="False">
+                            <Setter Property="BackgroundColor" Value="#FFEBEE" />
+                        </DataTrigger>
+                    </Border.Triggers>
+                    <VerticalStackLayout Spacing="8">
+                        <Label FontSize="20" FontAttributes="Bold">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding LastResult}" Value="True">
+                                    <Setter Property="Text" Value="&#x2714; Correct!" />
+                                    <Setter Property="TextColor" Value="#2E7D32" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Label" Binding="{Binding LastResult}" Value="False">
+                                    <Setter Property="Text" Value="&#x2718; Incorrect" />
+                                    <Setter Property="TextColor" Value="#C62828" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                        <Label Text="{Binding Explanation}" FontSize="14"
+                               TextColor="{StaticResource Gray600}"
+                               IsVisible="{Binding Explanation, Converter={StaticResource IsNotNullConverter}}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Submit Button -->
+                <Button Text="Submit Answer"
+                        Command="{Binding SubmitCommand}"
+                        IsVisible="{Binding LastResult, Converter={StaticResource IsNullConverter}}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"
+                        BackgroundColor="{StaticResource Primary}"
+                        TextColor="White" FontAttributes="Bold" FontSize="16"
+                        HeightRequest="54" CornerRadius="12" />
+
+                <!-- Next Button -->
+                <Button Text="Next Question"
+                        Command="{Binding NextCommand}"
+                        IsVisible="{Binding LastResult, Converter={StaticResource IsNotNullConverter}}"
+                        BackgroundColor="{StaticResource Tertiary}"
+                        TextColor="White" FontAttributes="Bold" FontSize="16"
+                        HeightRequest="54" CornerRadius="12" />
+
+                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                                   Color="{StaticResource Primary}" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
 </ContentPage>

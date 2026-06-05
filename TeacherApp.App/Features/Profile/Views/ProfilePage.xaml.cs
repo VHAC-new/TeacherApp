@@ -1,22 +1,22 @@
 using TeacherApp.App.Core;
-using TeacherApp.App.Features.Home.ViewModels;
+using TeacherApp.App.Features.Profile.ViewModels;
 
-namespace TeacherApp.App.Features.Home.Views;
+namespace TeacherApp.App.Features.Profile.Views;
 
-public partial class HomePage : ContentPage
+public partial class ProfilePage : ContentPage
 {
-    private readonly HomeViewModel _vm;
+    private readonly ProfileViewModel _vm;
 
-    public HomePage(HomeViewModel vm)
+    public ProfilePage(ProfileViewModel vm)
     {
         InitializeComponent();
         BindingContext = _vm = vm;
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        await _vm.LoadCommand.ExecuteAsync(null);
+        _vm.LoadCommand.Execute(null);
     }
 
     protected override void OnDisappearing()

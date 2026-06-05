@@ -12,4 +12,7 @@ public sealed class ProgressService(HttpClient http)
     public async Task<ModuleProgressResponse> GetModuleProgressAsync(Guid moduleId, CancellationToken ct = default) =>
         await http.GetFromJsonAsync<ModuleProgressResponse>($"api/v1/progress/modules/{moduleId}", ct)
         ?? throw new InvalidOperationException("Resposta inesperada.");
+
+    public async Task<List<LessonProgressResponse>> GetLessonProgressAsync(Guid moduleId, CancellationToken ct = default) =>
+        await http.GetFromJsonAsync<List<LessonProgressResponse>>($"api/v1/progress/modules/{moduleId}/lessons", ct) ?? [];
 }

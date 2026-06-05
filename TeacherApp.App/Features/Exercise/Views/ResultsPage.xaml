@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:TeacherApp.App.Features.Exercise.ViewModels"
+             x:Class="TeacherApp.App.Features.Exercise.Views.ResultsPage"
+             x:DataType="vm:ResultsViewModel"
+             Shell.NavBarIsVisible="False">
+
+    <Grid>
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="#F5F3FF" Offset="0.0" />
+                <GradientStop Color="#FFFFFF" Offset="0.5" />
+                <GradientStop Color="#F5F3FF" Offset="1.0" />
+            </LinearGradientBrush>
+        </Grid.Background>
+
+        <ScrollView>
+            <VerticalStackLayout Spacing="20" Padding="24,60,24,40"
+                                 VerticalOptions="Center">
+
+                <!-- Trophy -->
+                <Label Text="{Binding Trophy}" FontSize="72"
+                       HorizontalOptions="Center" />
+
+                <!-- Headline -->
+                <Label Text="{Binding Headline}" FontSize="28" FontAttributes="Bold"
+                       HorizontalOptions="Center" TextColor="{Binding HeadlineColor}" />
+
+                <Label Text="You've completed the lesson!"
+                       FontSize="16" TextColor="{StaticResource Gray500}"
+                       HorizontalOptions="Center" />
+
+                <!-- Score Card -->
+                <Border Padding="24" StrokeShape="RoundRectangle 16"
+                        Stroke="{StaticResource Gray200}" BackgroundColor="White"
+                        Margin="0,12,0,0">
+                    <Border.Shadow>
+                        <Shadow Brush="#00000015" Offset="0,3" Radius="10" />
+                    </Border.Shadow>
+
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="16">
+
+                        <!-- Score % -->
+                        <VerticalStackLayout Grid.Row="0" Spacing="4"
+                                             HorizontalOptions="Center">
+                            <Label Text="Score" FontSize="14" TextColor="{StaticResource Gray400}"
+                                   HorizontalOptions="Center" />
+                            <Label Text="{Binding ScorePercent, StringFormat='{0}%'}"
+                                   FontSize="40" FontAttributes="Bold"
+                                   TextColor="{StaticResource Primary}"
+                                   HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+
+                        <BoxView Grid.Row="1" HeightRequest="1"
+                                 Color="{StaticResource Gray100}" />
+
+                        <!-- Stats Row -->
+                        <Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                            <VerticalStackLayout HorizontalOptions="Center" Spacing="2">
+                                <Label Text="{Binding CorrectCount}" FontSize="22"
+                                       FontAttributes="Bold" TextColor="#4CAF50"
+                                       HorizontalOptions="Center" />
+                                <Label Text="Correct" FontSize="12"
+                                       TextColor="{StaticResource Gray400}"
+                                       HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="2">
+                                <Label Text="{Binding IncorrectCount}" FontSize="22"
+                                       FontAttributes="Bold" TextColor="#F44336"
+                                       HorizontalOptions="Center" />
+                                <Label Text="Incorrect" FontSize="12"
+                                       TextColor="{StaticResource Gray400}"
+                                       HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="2" HorizontalOptions="Center" Spacing="2">
+                                <Label Text="{Binding TotalCount}" FontSize="22"
+                                       FontAttributes="Bold" TextColor="{StaticResource Primary}"
+                                       HorizontalOptions="Center" />
+                                <Label Text="Total" FontSize="12"
+                                       TextColor="{StaticResource Gray400}"
+                                       HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- Buttons -->
+                <Button Text="Continue Learning"
+                        Command="{Binding ContinueLearningCommand}"
+                        BackgroundColor="{StaticResource Primary}"
+                        TextColor="White" FontAttributes="Bold" FontSize="16"
+                        HeightRequest="54" CornerRadius="12"
+                        Margin="0,16,0,0" />
+
+                <Button Text="Review Lesson"
+                        Command="{Binding ReviewLessonCommand}"
+                        BackgroundColor="Transparent"
+                        TextColor="{StaticResource Primary}"
+                        FontAttributes="Bold" FontSize="16"
+                        HeightRequest="54" CornerRadius="12"
+                        BorderColor="{StaticResource Primary}" BorderWidth="2" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

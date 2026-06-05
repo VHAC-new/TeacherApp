@@ -1,18 +1,20 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using TeacherApp.App.Core.Services;
+using TeacherApp.App.Core;
 using TeacherApp.App.Features.Lesson.Services;
-using TeacherApp.Contracts.Exercises;
 
 namespace TeacherApp.App.Features.Lesson.ViewModels;
 
 [QueryProperty(nameof(ModuleId), "moduleId")]
 [QueryProperty(nameof(LessonId), "lessonId")]
 [QueryProperty(nameof(Title), "title")]
+[QueryProperty(nameof(Description), "description")]
 [QueryProperty(nameof(AudioMediaId), "audioMediaId")]
-public partial class LessonViewModel(CatalogService catalog, MediaPlaybackService mediaPlayback) : ObservableObject
+public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : ObservableObject, ICleanup
 {
+    private CancellationTokenSource? _cts;
+    private bool _audioLoaded;
+
     [ObservableProperty]
     private string _moduleId = "";
 
@@ -23,13 +25,13 @@ public partial class LessonViewModel(CatalogService catalog, MediaPlaybackServic
     private string _title = "";
 
     [ObservableProperty]
+    private string _description = "";
+
+    [ObservableProperty]
     private string _audioMediaId = "";
 
     [ObservableProperty]
     private bool _isBusy;
-
-    [ObservableProperty]
-    private string? _error;
 
     [ObservableProperty]
     private string? _lessonAudioUri;
@@ -43,44 +45,41 @@ public partial class LessonViewModel(CatalogService catalog, MediaPlaybackServic
     [ObservableProperty]
     private string? _audioLoadError;
 
-    public ObservableCollection<ExerciseStudentResponse> Exercises { get; } = [];
+    [ObservableProperty]
+    private bool _hasDescription;
+
+    partial void OnDescriptionChanged(string value)
+    {
+        HasDescription = !string.IsNullOrWhiteSpace(value);
+    }
 
     [RelayCommand]
     private async Task LoadAsync()
     {
-        if (!Guid.TryParse(ModuleId, out var modId) || !Guid.TryParse(LessonId, out var lesId))
-        {
-            return;
-        }
+        if (_audioLoaded) return;
+
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        var ct = _cts.Token;
 
         IsBusy = true;
-        Error = null;
-        LessonAudioUri = null;
-        AudioLoadError = null;
-        HasLessonAudio = false;
-        IsAudioLoading = false;
 
         try
         {
-            var exercises = await catalog.GetExercisesAsync(modId, lesId);
-            Exercises.Clear();
-            foreach (var e in exercises)
-            {
-                Exercises.Add(e);
-            }
-
             if (Guid.TryParse(AudioMediaId, out var audioId))
             {
                 HasLessonAudio = true;
                 IsAudioLoading = true;
                 try
                 {
-                    LessonAudioUri = await mediaPlayback.ResolveLessonAudioUriAsync(audioId);
+                    LessonAudioUri = await mediaPlayback.ResolveLessonAudioUriAsync(audioId, ct);
+                    if (ct.IsCancellationRequested) return;
+
                     if (LessonAudioUri is null)
-                    {
                         AudioLoadError = "Não foi possível carregar o áudio desta lição.";
-                    }
                 }
+                catch (OperationCanceledException) { }
                 catch (HttpRequestException)
                 {
                     AudioLoadError = "Erro de rede ao obter o áudio.";
@@ -91,24 +90,34 @@ public partial class LessonViewModel(CatalogService catalog, MediaPlaybackServic
                 }
                 finally
                 {
-                    IsAudioLoading = false;
+                    if (!ct.IsCancellationRequested)
+                        IsAudioLoading = false;
                 }
             }
-        }
-        catch (HttpRequestException)
-        {
-            Error = "Erro ao carregar exercícios.";
+
+            _audioLoaded = true;
         }
         finally
         {
-            IsBusy = false;
+            if (!ct.IsCancellationRequested)
+                IsBusy = false;
         }
     }
 
     [RelayCommand]
-    private async Task NavigateToExercise(ExerciseStudentResponse exercise)
+    private async Task ContinueToExercises()
     {
         await Shell.Current.GoToAsync(
-            $"exercise?exerciseId={exercise.Id}&prompt={Uri.EscapeDataString(exercise.Prompt)}&hint={Uri.EscapeDataString(exercise.Hint ?? "")}");
+            $"exercise?moduleId={ModuleId}&lessonId={LessonId}");
+    }
+
+    public void Cleanup()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
+        _audioLoaded = false;
+        IsAudioLoading = false;
+        IsBusy = false;
     }
 }

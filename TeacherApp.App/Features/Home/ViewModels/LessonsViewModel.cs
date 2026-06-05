@@ -7,7 +7,7 @@ using TeacherApp.Contracts.Modules;
 
 namespace TeacherApp.App.Features.Home.ViewModels;
 
-public partial class HomeViewModel(CatalogService catalog) : ObservableObject, ICleanup
+public partial class LessonsViewModel(CatalogService catalog) : ObservableObject, ICleanup
 {
     private CancellationTokenSource? _cts;
     private bool _hasLoaded;
@@ -17,8 +17,6 @@ public partial class HomeViewModel(CatalogService catalog) : ObservableObject, I
 
     [ObservableProperty]
     private string? _error;
-
-    public int CurrentStreak => 7;
 
     public ObservableCollection<ModuleResponse> Modules { get; } = [];
 

@@ -3,64 +3,101 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:vm="clr-namespace:TeacherApp.App.Features.Lesson.ViewModels"
-             xmlns:contracts="clr-namespace:TeacherApp.Contracts.Exercises;assembly=TeacherApp.Contracts"
              x:Class="TeacherApp.App.Features.Lesson.Views.LessonPage"
              x:DataType="vm:LessonViewModel"
-             Title="{Binding Title}">
+             Shell.NavBarIsVisible="False">
 
-    <RefreshView IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
-        <ScrollView>
-            <VerticalStackLayout Spacing="16" Padding="16">
+    <Grid RowDefinitions="Auto,*">
 
-                <VerticalStackLayout Spacing="8" IsVisible="{Binding HasLessonAudio}">
-                    <Label Text="Áudio da lição" FontSize="18" FontAttributes="Bold" />
-                    <ActivityIndicator IsRunning="{Binding IsAudioLoading}" IsVisible="{Binding IsAudioLoading}" />
-                    <Label Text="{Binding AudioLoadError}" TextColor="Red" FontSize="13"
-                           IsVisible="{Binding AudioLoadError, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
-                    <toolkit:MediaElement Source="{Binding LessonAudioUri}"
-                                          HeightRequest="72"
-                                          ShouldAutoPlay="False"
-                                          ShouldShowPlaybackControls="True" />
-                </VerticalStackLayout>
+        <!-- Gradient Header -->
+        <Grid Grid.Row="0" Padding="20,50,20,24" MinimumHeightRequest="130">
+            <Grid.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#512BD4" Offset="0.0" />
+                    <GradientStop Color="#2B0B98" Offset="1.0" />
+                </LinearGradientBrush>
+            </Grid.Background>
 
-                <Label Text="Exercícios" FontSize="24" FontAttributes="Bold" />
+            <HorizontalStackLayout Spacing="12" VerticalOptions="End">
+                <Label Text="&#x2190;" TextColor="White" FontSize="24"
+                       VerticalOptions="Center">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnBackTapped" />
+                    </Label.GestureRecognizers>
+                </Label>
+                <Label Text="{Binding Title}" TextColor="White" FontSize="22"
+                       FontAttributes="Bold" VerticalOptions="Center"
+                       LineBreakMode="TailTruncation" MaxLines="1" />
+            </HorizontalStackLayout>
+        </Grid>
 
-                <Label Text="{Binding Error}" TextColor="Red" FontSize="14"
-                       IsVisible="{Binding Error, Converter={StaticResource IsNotNullConverter}}" />
+        <!-- Content -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="20" Padding="16,20,16,32">
 
-                <CollectionView ItemsSource="{Binding Exercises}">
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="contracts:ExerciseStudentResponse">
-                            <Frame Padding="16" Margin="0,0,0,8" CornerRadius="12"
-                                   BorderColor="{StaticResource Gray200}" HasShadow="True"
-                                   BackgroundColor="White">
-                                <Frame.GestureRecognizers>
-                                    <TapGestureRecognizer
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LessonViewModel}}, Path=NavigateToExerciseCommand}"
-                                        CommandParameter="{Binding .}" />
-                                </Frame.GestureRecognizers>
-                                <HorizontalStackLayout Spacing="12">
-                                    <Frame WidthRequest="40" HeightRequest="40" CornerRadius="20"
-                                           BackgroundColor="{StaticResource Primary}" Padding="0"
-                                           HasShadow="False">
-                                        <Label Text="{Binding Order}" TextColor="White"
-                                               HorizontalOptions="Center" VerticalOptions="Center"
-                                               FontAttributes="Bold" />
-                                    </Frame>
-                                    <Label Text="{Binding Prompt}" FontSize="16"
-                                           VerticalOptions="Center"
-                                           LineBreakMode="TailTruncation" MaxLines="2" />
-                                </HorizontalStackLayout>
-                            </Frame>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                    <CollectionView.EmptyView>
-                        <Label Text="Nenhum exercício nesta lição." TextColor="{StaticResource Gray400}"
-                               HorizontalOptions="Center" Margin="0,40,0,0" />
-                    </CollectionView.EmptyView>
-                </CollectionView>
+                <!-- Reading Card -->
+                <Border IsVisible="{Binding HasDescription}"
+                        Padding="20" StrokeShape="RoundRectangle 14"
+                        Stroke="{StaticResource Gray200}" BackgroundColor="White">
+                    <Border.Shadow>
+                        <Shadow Brush="#00000015" Offset="0,2" Radius="8" />
+                    </Border.Shadow>
+                    <VerticalStackLayout Spacing="12">
+                        <HorizontalStackLayout Spacing="8">
+                            <Label Text="&#x1F4D6;" FontSize="20" VerticalOptions="Center" />
+                            <Label Text="Reading" FontSize="18" FontAttributes="Bold"
+                                   VerticalOptions="Center" TextColor="{StaticResource Primary}" />
+                        </HorizontalStackLayout>
+                        <Label Text="{Binding Description}" FontSize="15"
+                               TextColor="{StaticResource Gray600}"
+                               LineBreakMode="WordWrap" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Audio Card -->
+                <Border IsVisible="{Binding HasLessonAudio}"
+                        Padding="20" StrokeShape="RoundRectangle 14"
+                        Stroke="{StaticResource Gray200}" BackgroundColor="White">
+                    <Border.Shadow>
+                        <Shadow Brush="#00000015" Offset="0,2" Radius="8" />
+                    </Border.Shadow>
+                    <VerticalStackLayout Spacing="12">
+                        <HorizontalStackLayout Spacing="8">
+                            <Label Text="&#x1F3A7;" FontSize="20" VerticalOptions="Center" />
+                            <Label Text="Listen" FontSize="18" FontAttributes="Bold"
+                                   VerticalOptions="Center" TextColor="{StaticResource Primary}" />
+                        </HorizontalStackLayout>
+
+                        <ActivityIndicator IsRunning="{Binding IsAudioLoading}"
+                                           IsVisible="{Binding IsAudioLoading}"
+                                           Color="{StaticResource Primary}" />
+
+                        <Label Text="{Binding AudioLoadError}" TextColor="Red" FontSize="13"
+                               IsVisible="{Binding AudioLoadError, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
+
+                        <toolkit:MediaElement x:Name="AudioPlayer"
+                                              Source="{Binding LessonAudioUri}"
+                                              HeightRequest="72"
+                                              ShouldAutoPlay="False"
+                                              ShouldShowPlaybackControls="True" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Continue Button -->
+                <Button Text="Continue to Exercises"
+                        Command="{Binding ContinueToExercisesCommand}"
+                        BackgroundColor="{StaticResource Primary}"
+                        TextColor="White" FontAttributes="Bold" FontSize="16"
+                        HeightRequest="54" CornerRadius="12"
+                        Margin="0,8,0,0" />
 
             </VerticalStackLayout>
         </ScrollView>
-    </RefreshView>
+
+        <!-- Loading Overlay -->
+        <ActivityIndicator Grid.Row="1" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                           Color="{StaticResource Primary}" VerticalOptions="Center"
+                           HorizontalOptions="Center" />
+
+    </Grid>
 </ContentPage>

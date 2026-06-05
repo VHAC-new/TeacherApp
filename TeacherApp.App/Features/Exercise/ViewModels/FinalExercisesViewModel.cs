@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using TeacherApp.App.Core;
 using TeacherApp.App.Core.Services;
 using TeacherApp.App.Features.Exercise.Services;
 using TeacherApp.Contracts.FinalExercises;
@@ -9,8 +10,11 @@ namespace TeacherApp.App.Features.Exercise.ViewModels;
 
 [QueryProperty(nameof(ModuleId), "moduleId")]
 [QueryProperty(nameof(Title), "title")]
-public partial class FinalExercisesViewModel(CatalogService catalog, ExerciseService exerciseService) : ObservableObject
+public partial class FinalExercisesViewModel(CatalogService catalog, ExerciseService exerciseService) : ObservableObject, ICleanup
 {
+    private CancellationTokenSource? _cts;
+    private string? _loadedModuleId;
+
     [ObservableProperty]
     private string _moduleId = "";
 
@@ -49,20 +53,38 @@ public partial class FinalExercisesViewModel(CatalogService catalog, ExerciseSer
     [RelayCommand]
     private async Task LoadAsync()
     {
-        if (!Guid.TryParse(ModuleId, out var id)) return;
+        if (!Guid.TryParse(ModuleId, out var id))
+            return;
+
+        if (Exercises.Count > 0 && _loadedModuleId == ModuleId)
+            return;
+
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        var ct = _cts.Token;
 
         IsBusy = true;
         Error = null;
 
         try
         {
-            var exercises = await catalog.GetFinalExercisesAsync(id);
+            var exercises = await catalog.GetFinalExercisesAsync(id, ct);
+            if (ct.IsCancellationRequested)
+                return;
+
             Exercises.Clear();
-            foreach (var e in exercises) Exercises.Add(e);
+            foreach (var e in exercises)
+                Exercises.Add(e);
             CurrentIndex = 0;
             CorrectCount = 0;
             Finished = false;
+            _loadedModuleId = ModuleId;
             OnPropertyChanged(nameof(CurrentExercise));
+        }
+        catch (OperationCanceledException)
+        {
+            // Tela saiu ou carregamento substituído.
         }
         catch (HttpRequestException)
         {
@@ -70,7 +92,8 @@ public partial class FinalExercisesViewModel(CatalogService catalog, ExerciseSer
         }
         finally
         {
-            IsBusy = false;
+            if (!ct.IsCancellationRequested)
+                IsBusy = false;
         }
     }
 
@@ -104,6 +127,9 @@ public partial class FinalExercisesViewModel(CatalogService catalog, ExerciseSer
     }
 
     [RelayCommand]
+    private async Task GoBackAsync() => await Shell.Current.GoToAsync("..");
+
+    [RelayCommand]
     private void Next()
     {
         LastResult = null;
@@ -112,10 +138,16 @@ public partial class FinalExercisesViewModel(CatalogService catalog, ExerciseSer
         CurrentIndex++;
 
         if (CurrentIndex >= Exercises.Count)
-        {
             Finished = true;
-        }
 
         OnPropertyChanged(nameof(CurrentExercise));
+    }
+
+    public void Cleanup()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
+        IsBusy = false;
     }
 }

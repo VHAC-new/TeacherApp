@@ -2,55 +2,117 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:TeacherApp.App.Features.Module.ViewModels"
-             xmlns:contracts="clr-namespace:TeacherApp.Contracts.Lessons;assembly=TeacherApp.Contracts"
+             xmlns:models="clr-namespace:TeacherApp.App.Features.Module.Models"
              x:Class="TeacherApp.App.Features.Module.Views.ModulePage"
              x:DataType="vm:ModuleViewModel"
-             Title="{Binding Title}">
+             Shell.NavBarIsVisible="False">
 
-    <RefreshView IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
-        <ScrollView>
-            <VerticalStackLayout Spacing="16" Padding="16">
+    <Grid RowDefinitions="Auto,*">
 
-                <Label Text="Lições" FontSize="24" FontAttributes="Bold" />
+        <!-- Gradient Header -->
+        <Grid Grid.Row="0" Padding="20,50,20,24" MinimumHeightRequest="180">
+            <Grid.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#512BD4" Offset="0.0" />
+                    <GradientStop Color="#2B0B98" Offset="1.0" />
+                </LinearGradientBrush>
+            </Grid.Background>
 
-                <Label Text="{Binding Error}" TextColor="Red" FontSize="14"
-                       IsVisible="{Binding Error, Converter={StaticResource IsNotNullConverter}}" />
+            <VerticalStackLayout Spacing="16" VerticalOptions="End">
+                <HorizontalStackLayout Spacing="12">
+                    <Label Text="&#x2190;" TextColor="White" FontSize="24"
+                           VerticalOptions="Center">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnBackTapped" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                    <Label Text="{Binding Title}" TextColor="White" FontSize="24"
+                           FontAttributes="Bold" VerticalOptions="Center" />
+                </HorizontalStackLayout>
 
-                <CollectionView ItemsSource="{Binding Lessons}">
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="contracts:LessonResponse">
-                            <Frame Padding="16" Margin="0,0,0,8" CornerRadius="12"
-                                   BorderColor="{StaticResource Gray200}" HasShadow="True"
-                                   BackgroundColor="White">
-                                <Frame.GestureRecognizers>
-                                    <TapGestureRecognizer
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ModuleViewModel}}, Path=NavigateToLessonCommand}"
-                                        CommandParameter="{Binding .}" />
-                                </Frame.GestureRecognizers>
-                                <VerticalStackLayout Spacing="4">
-                                    <Label Text="{Binding Title}" FontSize="18" FontAttributes="Bold" />
-                                    <Label Text="{Binding Description}" FontSize="14"
-                                           TextColor="{StaticResource Gray500}"
-                                           LineBreakMode="TailTruncation" MaxLines="2" />
-                                </VerticalStackLayout>
-                            </Frame>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                    <CollectionView.EmptyView>
-                        <Label Text="Nenhuma lição disponível." TextColor="{StaticResource Gray400}"
-                               HorizontalOptions="Center" Margin="0,40,0,0" />
-                    </CollectionView.EmptyView>
-                </CollectionView>
-
-                <Button Text="Exercícios Finais do Módulo"
-                        Command="{Binding NavigateToFinalExercisesCommand}"
-                        BackgroundColor="{StaticResource Tertiary}"
-                        TextColor="White"
-                        CornerRadius="10"
-                        HeightRequest="50"
-                        Margin="0,8,0,0" />
-
+                <!-- Overall Progress -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Overall Progress" TextColor="#FFFFFFCC" FontSize="13" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <ProgressBar Grid.Column="0" Progress="{Binding ProgressPercent}"
+                                     ProgressColor="#4CAF50" BackgroundColor="#FFFFFF33"
+                                     HeightRequest="8" VerticalOptions="Center" />
+                        <Label Grid.Column="1"
+                               Text="{Binding ProgressPercent, StringFormat='{0:P0}'}"
+                               TextColor="White" FontSize="13" FontAttributes="Bold"
+                               VerticalOptions="Center" />
+                    </Grid>
+                    <Label Text="{Binding ProgressText}" TextColor="#FFFFFFAA" FontSize="12" />
+                </VerticalStackLayout>
             </VerticalStackLayout>
-        </ScrollView>
-    </RefreshView>
+        </Grid>
+
+        <!-- Content -->
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
+            <ScrollView>
+                <VerticalStackLayout Spacing="0" Padding="16,16,16,24">
+
+                    <Label Text="{Binding Error}" TextColor="Red" FontSize="14"
+                           IsVisible="{Binding Error, Converter={StaticResource IsNotNullConverter}}"
+                           Margin="0,0,0,12" />
+
+                    <CollectionView ItemsSource="{Binding Lessons}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:LessonWithProgress">
+                                <Border Padding="16" Margin="0,0,0,12"
+                                        StrokeShape="RoundRectangle 12"
+                                        Stroke="{StaticResource Gray200}"
+                                        BackgroundColor="White">
+                                    <Border.Shadow>
+                                        <Shadow Brush="#00000020" Offset="0,2" Radius="6" />
+                                    </Border.Shadow>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ModuleViewModel}}, Path=NavigateToLessonCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+
+                                    <Grid ColumnDefinitions="48,*,Auto" ColumnSpacing="14">
+                                        <!-- Status Icon -->
+                                        <Border Grid.Column="0"
+                                                WidthRequest="44" HeightRequest="44"
+                                                StrokeShape="RoundRectangle 22"
+                                                Stroke="Transparent"
+                                                BackgroundColor="{Binding StatusColor}"
+                                                HorizontalOptions="Center" VerticalOptions="Center">
+                                            <Label Text="{Binding StatusIcon}" TextColor="White"
+                                                   FontSize="18" HorizontalOptions="Center"
+                                                   VerticalOptions="Center" />
+                                        </Border>
+
+                                        <!-- Title + Status Text -->
+                                        <VerticalStackLayout Grid.Column="1" Spacing="4"
+                                                             VerticalOptions="Center">
+                                            <Label Text="{Binding Title}" FontSize="16"
+                                                   FontAttributes="Bold" LineBreakMode="TailTruncation"
+                                                   MaxLines="1" />
+                                            <Label Text="{Binding StatusText}" FontSize="12"
+                                                   TextColor="{Binding StatusColor}" />
+                                        </VerticalStackLayout>
+
+                                        <!-- Chevron -->
+                                        <Label Grid.Column="2" Text="&#x276F;"
+                                               FontSize="18" TextColor="{StaticResource Gray300}"
+                                               VerticalOptions="Center" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                        <CollectionView.EmptyView>
+                            <Label Text="Nenhuma lição disponível."
+                                   TextColor="{StaticResource Gray400}"
+                                   HorizontalOptions="Center" Margin="0,40,0,0" />
+                        </CollectionView.EmptyView>
+                    </CollectionView>
+
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
+
+    </Grid>
 </ContentPage>
