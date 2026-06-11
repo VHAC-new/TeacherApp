@@ -530,12 +530,11 @@ else
 
     private static string FormatBytes(long bytes)
     {
-        return bytes switch
-        {
-            < 1024 => $"{bytes} B",
-            < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
-            _ => $"{bytes / (1024.0 * 1024.0):F1} MB"
-        };
+        const long KB = 1024;
+        const long MB = KB * 1024;
+        if (bytes < KB) return $"{bytes} B";
+        if (bytes < MB) return $"{bytes / (double)KB:F1} KB";
+        return $"{bytes / (double)MB:F1} MB";
     }
 
     private async Task StartLessonAudioPreviewAsync()
