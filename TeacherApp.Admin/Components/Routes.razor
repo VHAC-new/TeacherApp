@@ -1,8 +1,9 @@
 ﻿@rendermode InteractiveServer
 @inject AdminThemeState ThemeState
+@inject NavigationManager Navigation
 @implements IDisposable
 
-<MudThemeProvider IsDarkMode="@ThemeState.IsDarkMode"
+<MudThemeProvider IsDarkMode="@EffectiveIsDarkMode"
                   IsDarkModeChanged="OnDarkModeChangedAsync"
                   Theme="@AdminThemes.Default"
                   ObserveSystemDarkModeChange="false" />
@@ -31,9 +32,15 @@
 </CascadingAuthenticationState>
 
 @code {
+    private bool _isLoginRoute;
+
+    private bool EffectiveIsDarkMode => !_isLoginRoute && ThemeState.IsDarkMode;
+
     protected override void OnInitialized()
     {
         ThemeState.ChangedAsync += OnThemeChangedAsync;
+        Navigation.LocationChanged += OnLocationChanged;
+        UpdateIsLoginRoute();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -42,10 +49,25 @@
             await ThemeState.InitializeAsync();
     }
 
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        UpdateIsLoginRoute();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateIsLoginRoute()
+    {
+        var path = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
+        _isLoginRoute = path.Equals("login", StringComparison.OrdinalIgnoreCase);
+    }
+
     private Task OnThemeChangedAsync() => InvokeAsync(StateHasChanged);
 
     private async Task OnDarkModeChangedAsync(bool value)
     {
+        if (_isLoginRoute)
+            return;
+
         await ThemeState.SetDarkModeAsync(value);
         await InvokeAsync(StateHasChanged);
     }
@@ -53,5 +75,6 @@
     public void Dispose()
     {
         ThemeState.ChangedAsync -= OnThemeChangedAsync;
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }

@@ -1,5 +1,6 @@
 html, body {
     font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: #F8F9FB;
 }
 
 .validation-message {
@@ -84,4 +85,106 @@ h1:focus {
     position: absolute;
     right: 0.75rem;
     top: 0.5rem;
+}
+
+.admin-login-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    --mud-palette-text-primary: #1A1D29;
+    --mud-palette-text-secondary: #6B7280;
+    --mud-palette-text-disabled: #9CA3AF;
+    --mud-palette-lines-inputs: #E5E7EB;
+    --mud-palette-surface: #FFFFFF;
+    --mud-palette-background: #F8F9FB;
+    --mud-palette-action-default: #6B7280;
+}
+
+.admin-login-card {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+}
+
+.admin-login-field {
+    margin-bottom: 20px;
+}
+
+.admin-login-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: #1A1D29;
+    margin-bottom: 8px;
+}
+
+.admin-login-textfield.mud-input-control {
+    margin-top: 0;
+}
+
+.admin-login-textfield legend {
+    width: 0 !important;
+    max-width: 0 !important;
+}
+
+.admin-login-textfield .mud-input-label-outlined,
+.admin-login-textfield .mud-input-label-inputcontrol {
+    display: none !important;
+}
+
+.admin-login-textfield .mud-input-outlined-border {
+    border-color: #E5E7EB !important;
+    border-radius: 8px !important;
+}
+
+.admin-login-textfield .mud-input-outlined:hover .mud-input-outlined-border {
+    border-color: #4F7CFF !important;
+}
+
+.admin-login-textfield .mud-input-outlined.mud-input-outlined-focus .mud-input-outlined-border {
+    border-color: #4F7CFF !important;
+    border-width: 2px !important;
+}
+
+.admin-login-textfield .mud-input {
+    color: #1A1D29 !important;
+}
+
+.admin-login-textfield .mud-input > input.mud-input-root,
+.admin-login-textfield .mud-input-slot {
+    background-color: #FFFFFF !important;
+    color: #1A1D29 !important;
+}
+
+.admin-login-textfield .mud-input > input.mud-input-root {
+    min-height: 48px;
+}
+
+.admin-login-textfield .mud-input > input.mud-input-root::placeholder,
+.admin-login-textfield .mud-input > input.mud-input-root::-webkit-input-placeholder,
+.admin-login-textfield .mud-input > input.mud-input-root::-moz-placeholder,
+.admin-login-textfield .mud-input > input.mud-input-root:-ms-input-placeholder {
+    color: #9CA3AF !important;
+    opacity: 1 !important;
+}
+
+.admin-login-textfield .mud-input-adornment .mud-icon-root {
+    color: #9CA3AF;
+}
+
+.admin-login-submit {
+    height: 48px;
+    font-weight: 600;
+    text-transform: none;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(79, 124, 255, 0.25);
+}
+
+.admin-login-back-link {
+    color: #6B7280 !important;
+    text-decoration: none !important;
+}
+
+.admin-login-back-link:hover {
+    color: #1A1D29 !important;
 }

@@ -21,10 +21,7 @@ public partial class LessonPage : ContentPage
 
     protected override void OnDisappearing()
     {
-        try { AudioPlayer.Stop(); }
-        catch { }
-
-        AudioPlayer.Handler?.DisconnectHandler();
+        _vm.StopAudio();
 
         if (BindingContext is ICleanup cleanup)
             cleanup.Cleanup();
