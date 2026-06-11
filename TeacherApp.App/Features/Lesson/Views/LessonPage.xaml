@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:vm="clr-namespace:TeacherApp.App.Features.Lesson.ViewModels"
              x:Class="TeacherApp.App.Features.Lesson.Views.LessonPage"
              x:DataType="vm:LessonViewModel"
-             Shell.NavBarIsVisible="False">
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource OffBlack}}">
 
     <Grid RowDefinitions="Auto,*">
 
         <!-- Gradient Header -->
-        <Grid Grid.Row="0" Padding="20,50,20,24" MinimumHeightRequest="130">
+        <Grid Grid.Row="0" Padding="20,50,20,24" MinimumHeightRequest="140">
             <Grid.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                     <GradientStop Color="#512BD4" Offset="0.0" />
@@ -18,29 +18,34 @@
                 </LinearGradientBrush>
             </Grid.Background>
 
-            <HorizontalStackLayout Spacing="12" VerticalOptions="End">
-                <Label Text="&#x2190;" TextColor="White" FontSize="24"
-                       VerticalOptions="Center">
-                    <Label.GestureRecognizers>
+            <VerticalStackLayout Spacing="12" VerticalOptions="End">
+                <Image WidthRequest="24" HeightRequest="24"
+                       HorizontalOptions="Start">
+                    <Image.Source>
+                        <FontImageSource Glyph="&#xe5c4;"
+                                         FontFamily="MaterialIcons"
+                                         Color="White" Size="24" />
+                    </Image.Source>
+                    <Image.GestureRecognizers>
                         <TapGestureRecognizer Tapped="OnBackTapped" />
-                    </Label.GestureRecognizers>
-                </Label>
+                    </Image.GestureRecognizers>
+                </Image>
                 <Label Text="{Binding Title}" TextColor="White" FontSize="22"
-                       FontAttributes="Bold" VerticalOptions="Center"
-                       LineBreakMode="TailTruncation" MaxLines="1" />
-            </HorizontalStackLayout>
+                       FontAttributes="Bold"
+                       LineBreakMode="TailTruncation" MaxLines="2" />
+            </VerticalStackLayout>
         </Grid>
 
         <!-- Content -->
-        <ScrollView Grid.Row="1">
+        <ScrollView Grid.Row="1" BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource OffBlack}}">
             <VerticalStackLayout Spacing="20" Padding="16,20,16,32">
 
                 <!-- Reading Card -->
                 <Border IsVisible="{Binding HasDescription}"
-                        Padding="20" StrokeShape="RoundRectangle 14"
-                        Stroke="{StaticResource Gray200}" BackgroundColor="White">
+                        Padding="20" StrokeShape="RoundRectangle 16"
+                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource Gray600}}" BackgroundColor="White">
                     <Border.Shadow>
-                        <Shadow Brush="#00000015" Offset="0,2" Radius="8" />
+                        <Shadow Brush="#00000010" Offset="0,2" Radius="8" />
                     </Border.Shadow>
                     <VerticalStackLayout Spacing="12">
                         <HorizontalStackLayout Spacing="8">
@@ -54,14 +59,14 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- Audio Card -->
+                <!-- Audio Card - Custom Player -->
                 <Border IsVisible="{Binding HasLessonAudio}"
-                        Padding="20" StrokeShape="RoundRectangle 14"
-                        Stroke="{StaticResource Gray200}" BackgroundColor="White">
+                        Padding="20" StrokeShape="RoundRectangle 16"
+                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource Gray600}}" BackgroundColor="White">
                     <Border.Shadow>
-                        <Shadow Brush="#00000015" Offset="0,2" Radius="8" />
+                        <Shadow Brush="#00000010" Offset="0,2" Radius="8" />
                     </Border.Shadow>
-                    <VerticalStackLayout Spacing="12">
+                    <VerticalStackLayout Spacing="16">
                         <HorizontalStackLayout Spacing="8">
                             <Label Text="&#x1F3A7;" FontSize="20" VerticalOptions="Center" />
                             <Label Text="Listen" FontSize="18" FontAttributes="Bold"
@@ -75,11 +80,48 @@
                         <Label Text="{Binding AudioLoadError}" TextColor="Red" FontSize="13"
                                IsVisible="{Binding AudioLoadError, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
 
-                        <toolkit:MediaElement x:Name="AudioPlayer"
-                                              Source="{Binding LessonAudioUri}"
-                                              HeightRequest="72"
-                                              ShouldAutoPlay="False"
-                                              ShouldShowPlaybackControls="True" />
+                        <!-- Custom audio player UI -->
+                        <Border IsVisible="{Binding IsAudioLoading, Converter={StaticResource InvertedBoolConverter}}"
+                                StrokeShape="RoundRectangle 14"
+                                StrokeThickness="0"
+                                Padding="20"
+                                BackgroundColor="#F0EDFA">
+                            <VerticalStackLayout Spacing="14">
+                                <Border WidthRequest="56" HeightRequest="56"
+                                        StrokeShape="RoundRectangle 28"
+                                        StrokeThickness="0"
+                                        BackgroundColor="{StaticResource Primary}"
+                                        HorizontalOptions="Center">
+                                    <Border.Shadow>
+                                        <Shadow Brush="{StaticResource Primary}" Offset="0,4" Radius="12" Opacity="0.3" />
+                                    </Border.Shadow>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding TogglePlayCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <Image WidthRequest="26" HeightRequest="26"
+                                           HorizontalOptions="Center" VerticalOptions="Center">
+                                        <Image.Source>
+                                            <FontImageSource Glyph="{Binding PlayButtonGlyph}"
+                                                             FontFamily="MaterialIcons"
+                                                             Color="White" Size="26" />
+                                        </Image.Source>
+                                    </Image>
+                                </Border>
+
+                                <ProgressBar Progress="{Binding AudioProgress}"
+                                             ProgressColor="{StaticResource Primary}"
+                                             BackgroundColor="#D6CFF0"
+                                             HeightRequest="4" />
+
+                                <Grid ColumnDefinitions="*,*">
+                                    <Label Text="{Binding AudioCurrentTime}"
+                                           FontSize="12" TextColor="{StaticResource Gray500}" />
+                                    <Label Grid.Column="1" Text="{Binding AudioDuration}"
+                                           FontSize="12" TextColor="{StaticResource Gray500}"
+                                           HorizontalOptions="End" />
+                                </Grid>
+                            </VerticalStackLayout>
+                        </Border>
                     </VerticalStackLayout>
                 </Border>
 
@@ -89,7 +131,11 @@
                         BackgroundColor="{StaticResource Primary}"
                         TextColor="White" FontAttributes="Bold" FontSize="16"
                         HeightRequest="54" CornerRadius="12"
-                        Margin="0,8,0,0" />
+                        Margin="0,8,0,0">
+                    <Button.Shadow>
+                        <Shadow Brush="{StaticResource Primary}" Offset="0,4" Radius="12" Opacity="0.3" />
+                    </Button.Shadow>
+                </Button>
 
             </VerticalStackLayout>
         </ScrollView>

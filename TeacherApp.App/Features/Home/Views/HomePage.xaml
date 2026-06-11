@@ -8,7 +8,7 @@
              Title="Home">
 
     <RefreshView IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
-        <ScrollView>
+        <ScrollView BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource OffBlack}}">
             <VerticalStackLayout Spacing="0">
 
                 <!-- Header gradiente -->
@@ -26,7 +26,7 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <VerticalStackLayout Spacing="16" Padding="16,16,16,24">
+                <VerticalStackLayout Spacing="16" Padding="16,16,16,32">
 
                     <!-- Daily Streak Card -->
                     <Border StrokeThickness="0" Padding="24"
@@ -63,7 +63,7 @@
                             <DataTemplate x:DataType="contracts:ModuleResponse">
                                 <Border Padding="16" Margin="0,0,0,8"
                                         StrokeShape="RoundRectangle 16"
-                                        Stroke="{StaticResource Gray200}" StrokeThickness="1"
+                                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource Gray600}}" StrokeThickness="1"
                                         BackgroundColor="White">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer

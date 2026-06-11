@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
+using TeacherApp.App.Core;
 using TeacherApp.App.Core.Services;
 using TeacherApp.App.Features.Exercise.Services;
 using TeacherApp.App.Features.Exercise.ViewModels;
@@ -33,17 +34,20 @@ public static class MauiProgram
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                fonts.AddFont("MaterialIcons-Regular.ttf", "MaterialIcons");
             });
 
+        // Release (APK) e Debug usam a API pública na VPS.
+        // Para API local: emulador Android "http://10.0.2.2:5092", Windows "http://localhost:5092".
         var apiBaseUrl =
-#if ANDROID
-            //"http://10.0.2.2:5092";
-        //Celular Fisico
-        "http://192.168.0.131:5092";
+#if DEBUG
+             ApiEndpoints.VpsApi;
+             //"http://192.168.0.131:5092";
 #else
-            "http://localhost:5092";
+            ApiEndpoints.VpsRelease;
 #endif
 
+        builder.Services.AddSingleton<AppThemeService>();
         builder.Services.AddSingleton<TokenStore>();
         builder.Services.AddTransient<BearerTokenHandler>();
 

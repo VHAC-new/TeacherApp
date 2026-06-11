@@ -6,7 +6,7 @@
              x:DataType="vm:ProfileViewModel"
              Title="Profile">
 
-    <ScrollView>
+    <ScrollView BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource OffBlack}}">
         <VerticalStackLayout Spacing="0">
 
             <!-- Header gradiente -->
@@ -24,7 +24,7 @@
                 </VerticalStackLayout>
             </Border>
 
-            <VerticalStackLayout Spacing="16" Padding="16,16,16,24">
+            <VerticalStackLayout Spacing="16" Padding="16,16,16,32">
 
                 <!-- Cartão do perfil -->
                 <Border StrokeThickness="0" Padding="20"
@@ -39,7 +39,14 @@
                         <Border WidthRequest="72" HeightRequest="72"
                                 StrokeShape="RoundRectangle 36"
                                 BackgroundColor="#33FFFFFF" Stroke="#4DFFFFFF" StrokeThickness="3">
-                            <Label Text="👤" FontSize="34" HorizontalOptions="Center" VerticalOptions="Center" />
+                            <Image WidthRequest="36" HeightRequest="36"
+                                   HorizontalOptions="Center" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xe7fd;"
+                                                     FontFamily="MaterialIcons"
+                                                     Color="White" Size="36" />
+                                </Image.Source>
+                            </Image>
                         </Border>
                         <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                             <Label Text="{Binding DisplayName}" FontSize="22" FontAttributes="Bold" TextColor="White" />
@@ -48,16 +55,44 @@
                     </Grid>
                 </Border>
 
-                <!-- Ações da conta -->
+                <!-- Tema -->
                 <Border Padding="16"
                         StrokeShape="RoundRectangle 16"
-                        Stroke="{StaticResource Gray200}" StrokeThickness="1"
-                        BackgroundColor="White">
+                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource Gray600}}" StrokeThickness="1"
+                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource OffBlack}}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ToggleThemeCommand}" />
+                    </Border.GestureRecognizers>
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
                         <Border WidthRequest="48" HeightRequest="48"
                                 StrokeShape="RoundRectangle 14" StrokeThickness="0"
                                 BackgroundColor="{StaticResource Secondary}">
-                            <Label Text="⚙️" FontSize="22" HorizontalOptions="Center" VerticalOptions="Center" />
+                            <Label Text="{Binding ThemeEmoji}" FontSize="22" HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding ThemeTitle}" FontSize="16" FontAttributes="Bold" />
+                            <Label Text="{Binding ThemeSubtitle}" FontSize="14" TextColor="{StaticResource Gray500}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <!-- Ações da conta -->
+                <Border Padding="16"
+                        StrokeShape="RoundRectangle 16"
+                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource Gray600}}" StrokeThickness="1"
+                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource OffBlack}}">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                        <Border WidthRequest="48" HeightRequest="48"
+                                StrokeShape="RoundRectangle 14" StrokeThickness="0"
+                                BackgroundColor="#1A512BD4">
+                            <Image WidthRequest="24" HeightRequest="24"
+                                   HorizontalOptions="Center" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xe8b8;"
+                                                     FontFamily="MaterialIcons"
+                                                     Color="{StaticResource Primary}" Size="24" />
+                                </Image.Source>
+                            </Image>
                         </Border>
                         <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                             <Label Text="Settings" FontSize="16" FontAttributes="Bold" />
@@ -68,8 +103,8 @@
 
                 <Border Padding="16"
                         StrokeShape="RoundRectangle 16"
-                        Stroke="{StaticResource Gray200}" StrokeThickness="1"
-                        BackgroundColor="White">
+                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource Gray600}}" StrokeThickness="1"
+                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource OffBlack}}">
                     <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding LogoutCommand}" />
                     </Border.GestureRecognizers>
@@ -77,7 +112,14 @@
                         <Border WidthRequest="48" HeightRequest="48"
                                 StrokeShape="RoundRectangle 14" StrokeThickness="0"
                                 BackgroundColor="#1AEF4444">
-                            <Label Text="🚪" FontSize="22" HorizontalOptions="Center" VerticalOptions="Center" />
+                            <Image WidthRequest="24" HeightRequest="24"
+                                   HorizontalOptions="Center" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xe879;"
+                                                     FontFamily="MaterialIcons"
+                                                     Color="#EF4444" Size="24" />
+                                </Image.Source>
+                            </Image>
                         </Border>
                         <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                             <Label Text="Sign Out" FontSize="16" FontAttributes="Bold" TextColor="#EF4444" />

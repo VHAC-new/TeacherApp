@@ -5,45 +5,164 @@
              x:Class="TeacherApp.App.Features.Login.Views.LoginPage"
              x:DataType="vm:LoginViewModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="{StaticResource White}">
+             BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}">
 
-    <ScrollView>
+    <ScrollView BackgroundColor="Transparent">
         <VerticalStackLayout Spacing="20" Padding="30" VerticalOptions="Center">
 
-            <Label Text="TeacherApp"
-                   FontSize="32"
-                   FontAttributes="Bold"
-                   HorizontalOptions="Center"
-                   TextColor="{StaticResource Primary}" />
+            <VerticalStackLayout Spacing="8" HorizontalOptions="Center" Margin="0,0,0,16">
+                <Border WidthRequest="64" HeightRequest="64"
+                        StrokeShape="RoundRectangle 16"
+                        StrokeThickness="0"
+                        BackgroundColor="{StaticResource Primary}"
+                        HorizontalOptions="Center">
+                    <Border.Shadow>
+                        <Shadow Brush="{StaticResource Primary}" Offset="0,4" Radius="12" Opacity="0.3" />
+                    </Border.Shadow>
+                    <Image WidthRequest="32" HeightRequest="32"
+                           HorizontalOptions="Center" VerticalOptions="Center">
+                        <Image.Source>
+                            <FontImageSource Glyph="&#xe865;"
+                                             FontFamily="MaterialIcons"
+                                             Color="White" Size="32" />
+                        </Image.Source>
+                    </Image>
+                </Border>
 
-            <Label Text="Faça login para continuar"
-                   FontSize="16"
-                   HorizontalOptions="Center"
-                   TextColor="{StaticResource Gray400}" />
+                <Label Text="DhSchool"
+                       FontSize="28"
+                       FontAttributes="Bold"
+                       HorizontalOptions="Center"
+                       TextColor="{StaticResource Primary}" />
 
-            <Entry Placeholder="E-mail"
-                   Text="{Binding Email}"
-                   Keyboard="Email"
-                   ReturnType="Next" />
+                <Label Text="Welcome Back"
+                       FontSize="22"
+                       HorizontalOptions="Center"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark=White}" />
 
-            <Entry Placeholder="Senha"
-                   Text="{Binding Password}"
-                   IsPassword="True"
-                   ReturnType="Done" />
+                <Label Text="Sign in to continue learning"
+                       FontSize="14"
+                       HorizontalOptions="Center"
+                       TextColor="{StaticResource Gray400}" />
+            </VerticalStackLayout>
+
+            <!-- Email field with icon -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Email" FontSize="14"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark=White}" />
+                <Border Padding="0" StrokeShape="RoundRectangle 12"
+                        Stroke="{StaticResource Gray200}" StrokeThickness="1"
+                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource OffBlack}}">
+                    <Grid ColumnDefinitions="48,*" HeightRequest="52">
+                        <Image Grid.Column="0" WidthRequest="20" HeightRequest="20"
+                               HorizontalOptions="Center" VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xe158;"
+                                                 FontFamily="MaterialIcons"
+                                                 Color="{StaticResource Gray400}" Size="20" />
+                            </Image.Source>
+                        </Image>
+                        <Entry x:Name="EmailEntry"
+                               Grid.Column="1"
+                               Placeholder="your@email.com"
+                               Text="{Binding Email}"
+                               Keyboard="Email"
+                               ReturnType="Next"
+                               BackgroundColor="Transparent"
+                               Margin="0,0,12,0"
+                               Focused="OnEmailFocused"
+                               Unfocused="OnEmailUnfocused"
+                               TextChanged="OnEmailTextChanged" />
+                    </Grid>
+                </Border>
+
+                <!-- Recent emails dropdown -->
+                <Border x:Name="RecentEmailsContainer"
+                        IsVisible="false"
+                        StrokeShape="RoundRectangle 10"
+                        Stroke="{StaticResource Gray200}" StrokeThickness="1"
+                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource OffBlack}}"
+                        Padding="4">
+                    <Border.Shadow>
+                        <Shadow Brush="#00000020" Offset="0,2" Radius="6" />
+                    </Border.Shadow>
+                    <CollectionView ItemsSource="{Binding FilteredRecentEmails}"
+                                    SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Border Padding="12,10" StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 6"
+                                        BackgroundColor="Transparent">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LoginViewModel}}, Path=SelectRecentEmailCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="24,*" ColumnSpacing="10">
+                                        <Image WidthRequest="16" HeightRequest="16"
+                                               HorizontalOptions="Center" VerticalOptions="Center">
+                                            <Image.Source>
+                                                <FontImageSource Glyph="&#xe158;"
+                                                                 FontFamily="MaterialIcons"
+                                                                 Color="{StaticResource Gray400}" Size="16" />
+                                            </Image.Source>
+                                        </Image>
+                                        <Label Grid.Column="1" Text="{Binding .}"
+                                               FontSize="14" VerticalOptions="Center"
+                                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- Password field with icon -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Password" FontSize="14"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark=White}" />
+                <Border Padding="0" StrokeShape="RoundRectangle 12"
+                        Stroke="{StaticResource Gray200}" StrokeThickness="1"
+                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource OffBlack}}">
+                    <Grid ColumnDefinitions="48,*" HeightRequest="52">
+                        <Image Grid.Column="0" WidthRequest="20" HeightRequest="20"
+                               HorizontalOptions="Center" VerticalOptions="Center">
+                            <Image.Source>
+                                <FontImageSource Glyph="&#xe897;"
+                                                 FontFamily="MaterialIcons"
+                                                 Color="{StaticResource Gray400}" Size="20" />
+                            </Image.Source>
+                        </Image>
+                        <Entry Grid.Column="1"
+                               Placeholder="Enter your password"
+                               Text="{Binding Password}"
+                               IsPassword="True"
+                               ReturnType="Done"
+                               BackgroundColor="Transparent"
+                               Margin="0,0,12,0" />
+                    </Grid>
+                </Border>
+            </VerticalStackLayout>
 
             <Label Text="{Binding Error}"
                    TextColor="Red"
                    FontSize="14"
                    IsVisible="{Binding Error, Converter={StaticResource IsNotNullConverter}}" />
 
-            <Button Text="Entrar"
+            <Button Text="Sign In"
                     Command="{Binding LoginCommand}"
                     IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"
                     BackgroundColor="{StaticResource Primary}"
                     TextColor="White"
                     FontAttributes="Bold"
-                    HeightRequest="50"
-                    CornerRadius="10" />
+                    HeightRequest="54"
+                    CornerRadius="12"
+                    Margin="0,8,0,0">
+                <Button.Shadow>
+                    <Shadow Brush="{StaticResource Primary}" Offset="0,4" Radius="12" Opacity="0.3" />
+                </Button.Shadow>
+            </Button>
 
             <ActivityIndicator IsRunning="{Binding IsBusy}"
                                IsVisible="{Binding IsBusy}"

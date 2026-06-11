@@ -27,7 +27,7 @@ public sealed class AdminThemeState
             if (bool.TryParse(stored, out var parsed))
                 _isDarkMode = parsed;
             else
-                _isDarkMode = await _js.InvokeAsync<bool>("teacherAppAdminTheme.prefersDark");
+                _isDarkMode = false;
         }
         catch
         {

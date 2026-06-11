@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Plugin.Maui.Audio;
 using TeacherApp.App.Core;
 using TeacherApp.App.Features.Lesson.Services;
 
@@ -14,6 +15,12 @@ public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : Obser
 {
     private CancellationTokenSource? _cts;
     private bool _audioLoaded;
+    private IAudioPlayer? _audioPlayer;
+    private IDispatcherTimer? _progressTimer;
+
+    // Play glyph = &#xe037; (play_arrow), Pause glyph = &#xe034; (pause)
+    private const string PlayGlyph = "\ue037";
+    private const string PauseGlyph = "\ue034";
 
     [ObservableProperty]
     private string _moduleId = "";
@@ -48,9 +55,148 @@ public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : Obser
     [ObservableProperty]
     private bool _hasDescription;
 
+    [ObservableProperty]
+    private bool _isPlaying;
+
+    [ObservableProperty]
+    private double _audioProgress;
+
+    [ObservableProperty]
+    private string _audioCurrentTime = "0:00";
+
+    [ObservableProperty]
+    private string _audioDuration = "0:00";
+
+    [ObservableProperty]
+    private string _playButtonGlyph = PlayGlyph;
+
     partial void OnDescriptionChanged(string value)
     {
         HasDescription = !string.IsNullOrWhiteSpace(value);
+    }
+
+    partial void OnLessonAudioUriChanged(string? value)
+    {
+        if (!string.IsNullOrEmpty(value))
+            InitAudioPlayer(value);
+    }
+
+    private void InitAudioPlayer(string uri)
+    {
+        try
+        {
+            _audioPlayer?.Dispose();
+            _audioPlayer = null;
+
+            var audioManager = AudioManager.Current;
+
+            string filePath;
+            if (uri.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+                filePath = new Uri(uri).LocalPath;
+            else if (uri.StartsWith("/", StringComparison.Ordinal) || uri.Contains(":\\"))
+                filePath = uri;
+            else
+            {
+                AudioLoadError = "Formato de áudio não suportado.";
+                return;
+            }
+
+            var stream = File.OpenRead(filePath);
+            _audioPlayer = audioManager.CreatePlayer(stream);
+
+            _audioPlayer.PlaybackEnded += OnPlaybackEnded;
+
+            AudioDuration = FormatTime(_audioPlayer.Duration);
+        }
+        catch
+        {
+            AudioLoadError = "Erro ao preparar o player de áudio.";
+        }
+    }
+
+    private void OnPlaybackEnded(object? sender, EventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            IsPlaying = false;
+            PlayButtonGlyph = PlayGlyph;
+            AudioProgress = 0;
+            AudioCurrentTime = "0:00";
+            StopProgressTimer();
+        });
+    }
+
+    [RelayCommand]
+    private void TogglePlay()
+    {
+        if (_audioPlayer is null) return;
+
+        if (IsPlaying)
+        {
+            _audioPlayer.Pause();
+            IsPlaying = false;
+            PlayButtonGlyph = PlayGlyph;
+            StopProgressTimer();
+        }
+        else
+        {
+            _audioPlayer.Play();
+            IsPlaying = true;
+            PlayButtonGlyph = PauseGlyph;
+            StartProgressTimer();
+        }
+    }
+
+    private void StartProgressTimer()
+    {
+        StopProgressTimer();
+
+        _progressTimer = Application.Current?.Dispatcher.CreateTimer();
+        if (_progressTimer is null) return;
+
+        _progressTimer.Interval = TimeSpan.FromMilliseconds(250);
+        _progressTimer.Tick += OnProgressTimerTick;
+        _progressTimer.Start();
+    }
+
+    private void StopProgressTimer()
+    {
+        if (_progressTimer is null) return;
+        _progressTimer.Stop();
+        _progressTimer.Tick -= OnProgressTimerTick;
+        _progressTimer = null;
+    }
+
+    private void OnProgressTimerTick(object? sender, EventArgs e)
+    {
+        if (_audioPlayer is null) return;
+
+        var duration = _audioPlayer.Duration;
+        var current = _audioPlayer.CurrentPosition;
+
+        AudioProgress = duration > 0 ? current / duration : 0;
+        AudioCurrentTime = FormatTime(current);
+        AudioDuration = FormatTime(duration);
+    }
+
+    private static string FormatTime(double seconds)
+    {
+        var ts = TimeSpan.FromSeconds(Math.Max(0, seconds));
+        return ts.Hours > 0
+            ? ts.ToString(@"h\:mm\:ss")
+            : ts.ToString(@"m\:ss");
+    }
+
+    public void StopAudio()
+    {
+        StopProgressTimer();
+
+        if (_audioPlayer is not null)
+        {
+            try { _audioPlayer.Stop(); } catch { }
+            IsPlaying = false;
+            PlayButtonGlyph = PlayGlyph;
+        }
     }
 
     [RelayCommand]
@@ -113,6 +259,9 @@ public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : Obser
 
     public void Cleanup()
     {
+        StopAudio();
+        _audioPlayer?.Dispose();
+        _audioPlayer = null;
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;

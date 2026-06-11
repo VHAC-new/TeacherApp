@@ -1,10 +1,13 @@
-﻿namespace TeacherApp.App;
+﻿using TeacherApp.App.Core.Services;
+
+namespace TeacherApp.App;
 
 public partial class App : Application
 {
-	public App()
+	public App(AppThemeService themeService)
 	{
 		InitializeComponent();
+		themeService.ApplySavedOrDefault(this);
 	}
 
 	protected override Window CreateWindow(IActivationState? activationState)

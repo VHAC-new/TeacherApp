@@ -6,7 +6,10 @@ using TeacherApp.App.Features.Login.Services;
 
 namespace TeacherApp.App.Features.Profile.ViewModels;
 
-public partial class ProfileViewModel(AuthService auth, TokenStore tokenStore) : ObservableObject, ICleanup
+public partial class ProfileViewModel(
+    AuthService auth,
+    TokenStore tokenStore,
+    AppThemeService themeService) : ObservableObject, ICleanup
 {
     [ObservableProperty]
     private string _displayName = "Student";
@@ -14,11 +17,35 @@ public partial class ProfileViewModel(AuthService auth, TokenStore tokenStore) :
     [ObservableProperty]
     private string _email = "";
 
+    [ObservableProperty]
+    private string _themeTitle = "";
+
+    [ObservableProperty]
+    private string _themeSubtitle = "";
+
+    [ObservableProperty]
+    private string _themeEmoji = "";
+
     [RelayCommand]
     private void Load()
     {
         Email = tokenStore.Email ?? "";
         DisplayName = BuildDisplayName(tokenStore.Email);
+        RefreshThemeLabels();
+    }
+
+    [RelayCommand]
+    private void ToggleTheme()
+    {
+        themeService.Toggle();
+        RefreshThemeLabels();
+    }
+
+    private void RefreshThemeLabels()
+    {
+        ThemeTitle = themeService.ToggleTitle;
+        ThemeSubtitle = themeService.ToggleSubtitle;
+        ThemeEmoji = themeService.ToggleEmoji;
     }
 
     [RelayCommand]

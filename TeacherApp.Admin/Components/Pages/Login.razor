@@ -6,56 +6,124 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 
-<PageTitle>Login — TeacherApp Admin</PageTitle>
+<PageTitle>Login — DhSchool Admin</PageTitle>
 
-<MudStack Justify="Justify.Center" AlignItems="AlignItems.Center" Style="min-height: 100vh;">
-    <MudPaper Class="pa-6" Elevation="4" Style="width: 100%; max-width: 420px;">
-        <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-4">TeacherApp Admin</MudText>
+<MudStack Justify="Justify.Center" AlignItems="AlignItems.Center"
+          Class="admin-login-page">
+        <div style="width: 100%; max-width: 420px; padding: 24px;">
 
-        @if (!string.IsNullOrEmpty(_error))
-        {
-            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@_error</MudAlert>
-        }
+            <!-- Header with icons -->
+            <div class="text-center mb-8">
+                <div class="d-flex align-center gap-3 mb-6 justify-center">
+                    <MudPaper Elevation="3" Class="pa-3"
+                              Style="border-radius: 12px; background: #4F7CFF;">
+                        <MudIcon Icon="@Icons.Material.Filled.Shield" Style="color: white; font-size: 28px;" />
+                    </MudPaper>
+                    <div class="text-left">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Primary" />
+                            <MudText Typo="Typo.h6" Style="font-weight: 600; color: #1A1D29;">DhSchool</MudText>
+                        </div>
+                        <MudText Typo="Typo.body2" Style="color: #6B7280;">Admin Dashboard</MudText>
+                    </div>
+                </div>
 
-        <EditForm Model="_model" OnValidSubmit="HandleLogin">
-            <DataAnnotationsValidator />
-            <MudStack Spacing="3">
-                <MudTextField @bind-Value="_model.Email"
-                              For="@(() => _model.Email)"
-                              Label="E-mail"
-                              Variant="Variant.Outlined"
-                              Placeholder="admin@teacherapp.com"
-                              InputType="InputType.Email"
-                              Disabled="_loading" />
-                <MudTextField @bind-Value="_model.Password"
-                              For="@(() => _model.Password)"
-                              Label="Senha"
-                              Variant="Variant.Outlined"
-                              InputType="InputType.Password"
-                              Disabled="_loading" />
-                <MudButton ButtonType="ButtonType.Submit"
-                           Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           FullWidth="true"
-                           Disabled="_loading">
-                    @if (_loading)
-                    {
-                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-                    }
-                    else
-                    {
-                        <span>Entrar</span>
-                    }
-                </MudButton>
-            </MudStack>
-        </EditForm>
-    </MudPaper>
+                <MudText Typo="Typo.h5" Class="mb-1" Style="font-weight: 600; color: #1A1D29;">Welcome Back</MudText>
+                <MudText Typo="Typo.body2" Style="color: #6B7280;">
+                    Sign in to manage your platform
+                </MudText>
+            </div>
+
+            <!-- Login Card -->
+            <MudPaper Class="pa-8 admin-login-card" Elevation="0">
+
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@_error</MudAlert>
+                }
+
+                <EditForm Model="_model" OnValidSubmit="HandleLogin">
+                    <DataAnnotationsValidator />
+                    <MudStack Spacing="0">
+                        <div class="admin-login-field">
+                            <label class="admin-login-label" for="login-email">Email Address</label>
+                            <MudTextField id="login-email"
+                                          @bind-Value="_model.Email"
+                                          For="@(() => _model.Email)"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          Placeholder="admin@dhschool.com"
+                                          InputType="InputType.Email"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Email"
+                                          Disabled="_loading"
+                                          Class="admin-login-textfield" />
+                        </div>
+
+                        <div class="admin-login-field">
+                            <label class="admin-login-label" for="login-password">Password</label>
+                            <MudTextField id="login-password"
+                                          @bind-Value="_model.Password"
+                                          For="@(() => _model.Password)"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          Placeholder="Enter your password"
+                                          InputType="InputType.Password"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Lock"
+                                          Disabled="_loading"
+                                          Class="admin-login-textfield" />
+                        </div>
+
+                        <div class="d-flex align-center justify-space-between mt-2">
+                            <MudCheckBox @bind-Value="_rememberMe"
+                                         Label="Remember me"
+                                         Color="Color.Primary"
+                                         Dense="true"
+                                         Size="Size.Small" />
+                            <MudLink Typo="Typo.body2" Color="Color.Primary" Href="#">Forgot password?</MudLink>
+                        </div>
+
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   FullWidth="true"
+                                   Class="mt-6 admin-login-submit"
+                                   Disabled="_loading">
+                            @if (_loading)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            }
+                            else
+                            {
+                                <span>Sign In to Dashboard</span>
+                            }
+                        </MudButton>
+                    </MudStack>
+                </EditForm>
+            </MudPaper>
+
+            <div class="text-center mt-6">
+                <MudLink Typo="Typo.body2" Href="#" Class="admin-login-back-link">
+                    ← Back to Student App
+                </MudLink>
+            </div>
+
+            <!-- Footer -->
+            <MudText Typo="Typo.caption" Align="Align.Center" Class="mt-8" Style="color: #6B7280;">
+                This is the admin panel for teachers and administrators.
+            </MudText>
+            <MudText Typo="Typo.caption" Align="Align.Center" Style="color: #6B7280;">
+                Students should use the mobile app.
+            </MudText>
+        </div>
 </MudStack>
 
 @code {
     private LoginModel _model = new();
     private string? _error;
     private bool _loading;
+    private bool _rememberMe;
 
     private sealed class LoginModel
     {

@@ -8,11 +8,17 @@ public static class AdminThemes
     {
         PaletteLight = new PaletteLight
         {
-            Primary = "#1565c0",
+            Primary = "#4F7CFF",
             Secondary = "#5c6bc0",
-            AppbarBackground = "#1565c0",
-            DrawerBackground = "#f5f5f5",
+            Background = "#F8F9FB",
+            Surface = "#FFFFFF",
+            AppbarBackground = "#4F7CFF",
+            DrawerBackground = "#FFFFFF",
             DrawerText = "rgba(0,0,0,.87)",
+            LinesDefault = "#E5E7EB",
+            Divider = "#E5E7EB",
+            TextPrimary = "#1A1D29",
+            TextSecondary = "#6B7280",
             Success = "#2e7d32",
             Warning = "#f57c00",
             Error = "#c62828",
