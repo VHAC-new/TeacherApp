@@ -6,37 +6,42 @@
              x:Class="TeacherApp.App.Features.Module.Views.ModulePage"
              x:DataType="vm:ModuleViewModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource OffBlack}}">
+             BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
 
     <Grid RowDefinitions="Auto,*">
 
         <!-- Gradient Header -->
-        <Grid Grid.Row="0" Padding="20,50,20,24" MinimumHeightRequest="180">
+        <Grid Grid.Row="0" Padding="20,16,20,24" MinimumHeightRequest="140">
             <Grid.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#512BD4" Offset="0.0" />
-                    <GradientStop Color="#2B0B98" Offset="1.0" />
+                    <GradientStop Color="{StaticResource Primary}" Offset="0.0" />
+                    <GradientStop Color="{StaticResource Tertiary}" Offset="1.0" />
                 </LinearGradientBrush>
             </Grid.Background>
 
-            <VerticalStackLayout Spacing="16" VerticalOptions="End">
-                <HorizontalStackLayout Spacing="12">
-                    <Label Text="&#x2190;" TextColor="White" FontSize="24"
-                           VerticalOptions="Center">
-                        <Label.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnBackTapped" />
-                        </Label.GestureRecognizers>
-                    </Label>
-                    <Label Text="{Binding Title}" TextColor="White" FontSize="24"
-                           FontAttributes="Bold" VerticalOptions="Center" />
-                </HorizontalStackLayout>
+            <VerticalStackLayout Spacing="8" VerticalOptions="End">
+                <!-- Back button on its own line (Figma layout) -->
+                <Image WidthRequest="24" HeightRequest="24"
+                       HorizontalOptions="Start">
+                    <Image.Source>
+                        <FontImageSource Glyph="&#xe5c4;"
+                                         FontFamily="MaterialIcons"
+                                         Color="White" Size="24" />
+                    </Image.Source>
+                    <Image.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnBackTapped" />
+                    </Image.GestureRecognizers>
+                </Image>
+
+                <Label Text="{Binding Title}" TextColor="White" FontSize="24"
+                       FontAttributes="Bold" />
 
                 <!-- Overall Progress -->
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Overall Progress" TextColor="#FFFFFFCC" FontSize="13" />
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                         <ProgressBar Grid.Column="0" Progress="{Binding ProgressPercent}"
-                                     ProgressColor="#4CAF50" BackgroundColor="#FFFFFF33"
+                                     ProgressColor="White" BackgroundColor="#33FFFFFF"
                                      HeightRequest="8" VerticalOptions="Center" />
                         <Label Grid.Column="1"
                                Text="{Binding ProgressPercent, StringFormat='{0:P0}'}"
@@ -49,8 +54,8 @@
         </Grid>
 
         <!-- Content -->
-        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
-            <ScrollView BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource OffBlack}}">
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
+            <ScrollView BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
                 <VerticalStackLayout Spacing="0" Padding="16,16,16,24">
 
                     <Label Text="{Binding Error}" TextColor="Red" FontSize="14"
@@ -62,8 +67,8 @@
                             <DataTemplate x:DataType="models:LessonWithProgress">
                                 <Border Padding="16" Margin="0,0,0,12"
                                         StrokeShape="RoundRectangle 12"
-                                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource Gray600}}"
-                                        BackgroundColor="White">
+                                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}"
+                                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource CardBackgroundDark}}">
                                     <Border.Shadow>
                                         <Shadow Brush="#00000020" Offset="0,2" Radius="6" />
                                     </Border.Shadow>
@@ -74,14 +79,15 @@
                                     </Border.GestureRecognizers>
 
                                     <Grid ColumnDefinitions="48,*,Auto" ColumnSpacing="14">
-                                        <!-- Status Icon -->
+                                        <!-- Status Icon (Figma: CheckCircle green outline, no filled bg) -->
                                         <Border Grid.Column="0"
                                                 WidthRequest="44" HeightRequest="44"
                                                 StrokeShape="RoundRectangle 22"
-                                                Stroke="Transparent"
-                                                BackgroundColor="{Binding StatusColor}"
+                                                Stroke="{Binding StatusColor}"
+                                                StrokeThickness="2"
+                                                BackgroundColor="Transparent"
                                                 HorizontalOptions="Center" VerticalOptions="Center">
-                                            <Label Text="{Binding StatusIcon}" TextColor="White"
+                                            <Label Text="{Binding StatusIcon}" TextColor="{Binding StatusColor}"
                                                    FontSize="18" HorizontalOptions="Center"
                                                    VerticalOptions="Center" />
                                         </Border>
@@ -91,7 +97,8 @@
                                                              VerticalOptions="Center">
                                             <Label Text="{Binding Title}" FontSize="16"
                                                    FontAttributes="Bold" LineBreakMode="TailTruncation"
-                                                   MaxLines="1" />
+                                                   MaxLines="1"
+                                                   TextColor="{AppThemeBinding Light={StaticResource Foreground}, Dark={StaticResource ForegroundDark}}" />
                                             <Label Text="{Binding StatusText}" FontSize="12"
                                                    TextColor="{Binding StatusColor}" />
                                         </VerticalStackLayout>

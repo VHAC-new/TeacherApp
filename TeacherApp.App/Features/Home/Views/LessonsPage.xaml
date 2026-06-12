@@ -7,8 +7,8 @@
              x:DataType="vm:LessonsViewModel"
              Title="Lessons">
 
-    <RefreshView IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
-        <ScrollView BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource OffBlack}}">
+    <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
+        <ScrollView BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
             <VerticalStackLayout Spacing="0">
 
                 <!-- Header gradiente -->
@@ -38,8 +38,8 @@
                             <DataTemplate x:DataType="contracts:ModuleResponse">
                                 <Border Padding="20" Margin="0,0,0,12"
                                         StrokeShape="RoundRectangle 16"
-                                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource Gray600}}" StrokeThickness="1"
-                                        BackgroundColor="White">
+                                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}" StrokeThickness="1"
+                                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource CardBackgroundDark}}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LessonsViewModel}}, Path=NavigateToModuleCommand}"

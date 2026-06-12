@@ -2,13 +2,12 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:TeacherApp.App.Features.Home.ViewModels"
-             xmlns:contracts="clr-namespace:TeacherApp.Contracts.Modules;assembly=TeacherApp.Contracts"
              x:Class="TeacherApp.App.Features.Home.Views.HomePage"
              x:DataType="vm:HomeViewModel"
              Title="Home">
 
-    <RefreshView IsRefreshing="{Binding IsBusy}" Command="{Binding LoadCommand}">
-        <ScrollView BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource OffBlack}}">
+    <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
+        <ScrollView BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
             <VerticalStackLayout Spacing="0">
 
                 <!-- Header gradiente -->
@@ -52,37 +51,8 @@
                         </VerticalStackLayout>
                     </Border>
 
-                    <!-- Lista de módulos -->
-                    <Label Text="Modules" FontSize="20" FontAttributes="Bold" Margin="0,8,0,0" />
-
                     <Label Text="{Binding Error}" TextColor="Red" FontSize="14"
                            IsVisible="{Binding Error, Converter={StaticResource IsNotNullConverter}}" />
-
-                    <CollectionView ItemsSource="{Binding Modules}">
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="contracts:ModuleResponse">
-                                <Border Padding="16" Margin="0,0,0,8"
-                                        StrokeShape="RoundRectangle 16"
-                                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource Gray600}}" StrokeThickness="1"
-                                        BackgroundColor="White">
-                                    <Border.GestureRecognizers>
-                                        <TapGestureRecognizer
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HomeViewModel}}, Path=NavigateToModuleCommand}"
-                                            CommandParameter="{Binding .}" />
-                                    </Border.GestureRecognizers>
-                                    <VerticalStackLayout Spacing="4">
-                                        <Label Text="{Binding Title}" FontSize="18" FontAttributes="Bold" />
-                                        <Label Text="{Binding Description}" FontSize="14" TextColor="{StaticResource Gray500}"
-                                               LineBreakMode="TailTruncation" MaxLines="2" />
-                                    </VerticalStackLayout>
-                                </Border>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                        <CollectionView.EmptyView>
-                            <Label Text="Nenhum módulo disponível." TextColor="{StaticResource Gray400}"
-                                   HorizontalOptions="Center" Margin="0,40,0,0" />
-                        </CollectionView.EmptyView>
-                    </CollectionView>
 
                 </VerticalStackLayout>
             </VerticalStackLayout>

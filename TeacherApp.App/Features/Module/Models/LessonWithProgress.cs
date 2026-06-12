@@ -11,6 +11,7 @@ public sealed class LessonWithProgress
     public int Order { get; }
     public Guid? AudioMediaId { get; }
     public bool IsCompleted { get; }
+    public bool IsLocked { get; }
     public int TotalExercises { get; }
     public int CompletedExercises { get; }
     public string StatusText { get; }
@@ -27,12 +28,13 @@ public sealed class LessonWithProgress
         TotalExercises = progress?.TotalExercises ?? 0;
         CompletedExercises = progress?.CompletedExercises ?? 0;
         IsCompleted = progress?.IsCompleted ?? false;
+        IsLocked = isLocked;
 
         if (IsCompleted)
         {
             StatusText = "Completed";
             StatusIcon = "\u2714";
-            StatusColor = Color.FromArgb("#4CAF50");
+            StatusColor = Color.FromArgb("#10B981");
         }
         else if (isLocked)
         {
@@ -44,7 +46,7 @@ public sealed class LessonWithProgress
         {
             StatusText = "Ready to start";
             StatusIcon = "\u25B6";
-            StatusColor = Color.FromArgb("#512BD4");
+            StatusColor = Color.FromArgb("#4F7CFF");
         }
     }
 }

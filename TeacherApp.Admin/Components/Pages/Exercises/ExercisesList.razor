@@ -9,7 +9,7 @@
 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-4">
     <div>
         <MudText Typo="Typo.h4">Exercícios</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">Gerencie o conteúdo dos exercícios</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Gerencie o conteúdo dos exercícios</MudText>
     </div>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenForm(null))" Disabled="@(_lessons.Count == 0)">Novo Exercício</MudButton>
 </MudStack>
@@ -34,7 +34,7 @@
 }
 else if (_exercises.Count == 0)
 {
-    <MudText Typo="Typo.body1" Color="Color.Secondary">Nenhum exercício encontrado.</MudText>
+    <MudText Typo="Typo.body1" Class="mud-text-secondary">Nenhum exercício encontrado.</MudText>
 }
 else
 {
@@ -42,12 +42,14 @@ else
         <HeaderContent>
             <MudTh>Pergunta</MudTh>
             <MudTh>Resposta</MudTh>
+            <MudTh>Módulo</MudTh>
             <MudTh>Lição</MudTh>
             <MudTh Style="width: 200px;">Ações</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Pergunta">@Truncate(context.Prompt, 60)</MudTd>
             <MudTd DataLabel="Resposta">@Truncate(context.ExpectedAnswer, 30)</MudTd>
+            <MudTd DataLabel="Módulo">@GetModuleTitle(context.LessonId)</MudTd>
             <MudTd DataLabel="Lição">@(_lessons.FirstOrDefault(l => l.Id == context.LessonId)?.Title ?? "—")</MudTd>
             <MudTd DataLabel="Ações">
                 <MudTooltip Text="Editar">
@@ -79,7 +81,7 @@ else
                 <MudTextField @bind-Value="_form.ExpectedAnswer" For="@(() => _form.ExpectedAnswer)" Label="Resposta esperada" Variant="Variant.Outlined" />
                 <MudTextField @bind-Value="_form.Hint" Label="Dica" Variant="Variant.Outlined" />
                 <MudTextField @bind-Value="_form.Explanation" Label="Explicação" Variant="Variant.Outlined" Lines="2" />
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Conteúdo do exercício apresentado aos alunos</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Conteúdo do exercício apresentado aos alunos</MudText>
                 <MudNumericField @bind-Value="_form.Order" Label="Ordem" Variant="Variant.Outlined" Min="0" />
                 <MudStack Row="true" Spacing="3" Wrap="Wrap.Wrap">
                     <MudCheckBox @bind-Value="_form.IgnoreCase" Label="Ignorar maiúsculas/minúsculas" Color="Color.Primary" />
@@ -121,6 +123,7 @@ else
         BackdropClick = true
     };
 
+    private List<TeacherApp.Contracts.Modules.ModuleResponse> _modules = [];
     private List<TeacherApp.Contracts.Lessons.LessonResponse> _lessons = [];
     private List<TeacherApp.Contracts.Exercises.ExerciseResponse> _exercises = [];
     private bool _loading = true;
@@ -152,7 +155,11 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        _lessons = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Lessons.LessonResponse>>("api/v1/admin/lessons") ?? [];
+        var modulesTask = Http.GetFromJsonAsync<List<TeacherApp.Contracts.Modules.ModuleResponse>>("api/v1/admin/modules");
+        var lessonsTask = Http.GetFromJsonAsync<List<TeacherApp.Contracts.Lessons.LessonResponse>>("api/v1/admin/lessons");
+        await Task.WhenAll(modulesTask, lessonsTask);
+        _modules = modulesTask.Result ?? [];
+        _lessons = lessonsTask.Result ?? [];
         await LoadAsync();
     }
 
@@ -281,4 +288,13 @@ else
 
     private static string Truncate(string text, int maxLen) =>
         text.Length <= maxLen ? text : text[..maxLen] + "...";
+
+    private string GetModuleTitle(Guid lessonId)
+    {
+        var lesson = _lessons.FirstOrDefault(l => l.Id == lessonId);
+        if (lesson is null)
+            return "—";
+
+        return _modules.FirstOrDefault(m => m.Id == lesson.ModuleId)?.Title ?? "—";
+    }
 }

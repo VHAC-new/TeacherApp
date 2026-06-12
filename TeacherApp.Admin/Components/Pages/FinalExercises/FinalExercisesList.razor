@@ -9,7 +9,7 @@
 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-4">
     <div>
         <MudText Typo="Typo.h4">Exercícios Finais</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">Gerencie o conteúdo dos exercícios finais</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Gerencie o conteúdo dos exercícios finais</MudText>
     </div>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenForm(null))" Disabled="@(_modules.Count == 0)">Novo Exercício Final</MudButton>
 </MudStack>
@@ -53,7 +53,7 @@
 }
 else if (FilteredFinalExercises.Count == 0)
 {
-    <MudText Typo="Typo.body1" Color="Color.Secondary">
+    <MudText Typo="Typo.body1" Class="mud-text-secondary">
         @(string.IsNullOrWhiteSpace(_searchTerm)
             ? "Nenhum exercício final encontrado."
             : "Nenhum resultado para a busca.")
@@ -102,7 +102,7 @@ else
                 <MudTextField @bind-Value="_form.ExpectedAnswer" For="@(() => _form.ExpectedAnswer)" Label="Resposta esperada" Variant="Variant.Outlined" />
                 <MudTextField @bind-Value="_form.Hint" Label="Dica" Variant="Variant.Outlined" />
                 <MudTextField @bind-Value="_form.Explanation" Label="Explicação" Variant="Variant.Outlined" Lines="2" />
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Conteúdo do exercício apresentado aos alunos</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Conteúdo do exercício apresentado aos alunos</MudText>
                 <MudNumericField @bind-Value="_form.Order" Label="Ordem" Variant="Variant.Outlined" Min="0" />
                 <MudStack Row="true" Spacing="3" Wrap="Wrap.Wrap">
                     <MudCheckBox @bind-Value="_form.IgnoreCase" Label="Ignorar maiúsculas/minúsculas" Color="Color.Primary" />

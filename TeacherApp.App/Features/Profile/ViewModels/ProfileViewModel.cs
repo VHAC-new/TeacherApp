@@ -49,6 +49,12 @@ public partial class ProfileViewModel(
     }
 
     [RelayCommand]
+    private async Task ChangePasswordAsync()
+    {
+        await Shell.Current.GoToAsync("change-password");
+    }
+
+    [RelayCommand]
     private async Task LogoutAsync()
     {
         auth.Logout();

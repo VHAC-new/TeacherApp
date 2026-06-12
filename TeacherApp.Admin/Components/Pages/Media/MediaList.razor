@@ -10,7 +10,7 @@
 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-4">
     <div>
         <MudText Typo="Typo.h4">Mídia</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">Gerencie seus arquivos de áudio e imagem</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Gerencie seus arquivos de áudio e imagem</MudText>
     </div>
     <MudButton Variant="Variant.Filled"
                Color="Color.Primary"
@@ -37,7 +37,7 @@
 }
 else if (FilteredMedia.Count == 0)
 {
-    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+    <MudText Typo="Typo.body1" Class="mud-text-secondary mb-4">
         @(string.IsNullOrWhiteSpace(_searchTerm)
             ? "Nenhum arquivo de mídia encontrado."
             : "Nenhum resultado para a busca.")
@@ -60,7 +60,7 @@ else
                                 <MudText Typo="Typo.subtitle2" Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                                     @media.FileName
                                 </MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
                                     @FormatBytes(media.SizeBytes)
                                 </MudText>
                             </MudStack>
@@ -68,7 +68,7 @@ else
                     </MudCardContent>
                     <MudDivider />
                     <MudCardActions>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-2" Style="flex:1;">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary ml-2" Style="flex:1;">
                             @media.UploadedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
                         </MudText>
                         @if (media.UploadCompleted && IsAudio(media))
@@ -124,9 +124,9 @@ else
      @ondragleave="OnDragLeave"
      @ondrop="OnDropAsync"
      @ondrop:preventDefault="true">
-    <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Style="font-size:3rem;" Color="Color.Secondary" />
+    <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Style="font-size:3rem;" Class="mud-text-secondary" />
     <MudText Typo="Typo.subtitle1" Class="mt-2">Arraste e solte arquivos aqui ou clique para selecionar</MudText>
-    <MudText Typo="Typo.caption" Color="Color.Secondary">Suporta MP3, WAV, M4A, imagens — até 50 MB</MudText>
+    <MudText Typo="Typo.caption" Class="mud-text-secondary">Suporta MP3, WAV, M4A, imagens — até 50 MB</MudText>
     <InputFile id="admin-media-dropzone-input"
                OnChange="OnDropZoneFileSelectedAsync"
                accept="audio/*,image/*"
@@ -141,7 +141,7 @@ else
         <MudStack Spacing="1">
             <MudProgressLinear Value="@(_uploadProgress.Value)"
                                Color="@(_uploadError is not null ? Color.Error : Color.Primary)" />
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@_uploadStatus</MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">@_uploadStatus</MudText>
         </MudStack>
         @if (!string.IsNullOrEmpty(_uploadError))
         {
@@ -171,7 +171,7 @@ else
             {
                 <MudStack Spacing="1">
                     <MudProgressLinear Value="@(_uploadProgress.Value)" Color="@(_uploadError is not null ? Color.Error : Color.Primary)" Class="my-2" />
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@_uploadStatus</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@_uploadStatus</MudText>
                 </MudStack>
             }
 

@@ -16,7 +16,7 @@ public partial class ModulePage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await _vm.LoadCommand.ExecuteAsync(null);
+        await _vm.RefreshCommand.ExecuteAsync(null);
     }
 
     protected override void OnDisappearing()

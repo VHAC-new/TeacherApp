@@ -5,20 +5,20 @@
              x:Class="TeacherApp.App.Features.Lesson.Views.LessonPage"
              x:DataType="vm:LessonViewModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource OffBlack}}">
+             BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
 
     <Grid RowDefinitions="Auto,*">
 
         <!-- Gradient Header -->
-        <Grid Grid.Row="0" Padding="20,50,20,24" MinimumHeightRequest="140">
+        <Grid Grid.Row="0" Padding="20,16,20,24" MinimumHeightRequest="100">
             <Grid.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#512BD4" Offset="0.0" />
-                    <GradientStop Color="#2B0B98" Offset="1.0" />
+                    <GradientStop Color="{StaticResource Primary}" Offset="0.0" />
+                    <GradientStop Color="{StaticResource Tertiary}" Offset="1.0" />
                 </LinearGradientBrush>
             </Grid.Background>
 
-            <VerticalStackLayout Spacing="12" VerticalOptions="End">
+            <VerticalStackLayout Spacing="8" VerticalOptions="End">
                 <Image WidthRequest="24" HeightRequest="24"
                        HorizontalOptions="Start">
                     <Image.Source>
@@ -37,13 +37,14 @@
         </Grid>
 
         <!-- Content -->
-        <ScrollView Grid.Row="1" BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource OffBlack}}">
+        <ScrollView Grid.Row="1" BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
             <VerticalStackLayout Spacing="20" Padding="16,20,16,32">
 
                 <!-- Reading Card -->
                 <Border IsVisible="{Binding HasDescription}"
                         Padding="20" StrokeShape="RoundRectangle 16"
-                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource Gray600}}" BackgroundColor="White">
+                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}"
+                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource CardBackgroundDark}}">
                     <Border.Shadow>
                         <Shadow Brush="#00000010" Offset="0,2" Radius="8" />
                     </Border.Shadow>
@@ -54,75 +55,68 @@
                                    VerticalOptions="Center" TextColor="{StaticResource Primary}" />
                         </HorizontalStackLayout>
                         <Label Text="{Binding Description}" FontSize="15"
-                               TextColor="{StaticResource Gray600}"
+                               TextColor="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}"
                                LineBreakMode="WordWrap" />
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- Audio Card - Custom Player -->
+                <!-- Audio Player -->
+                <ActivityIndicator IsRunning="{Binding IsAudioLoading}"
+                                   IsVisible="{Binding IsAudioLoading}"
+                                   Color="{StaticResource Primary}"
+                                   HorizontalOptions="Center" />
+
+                <Label Text="{Binding AudioLoadError}" TextColor="Red" FontSize="13"
+                       IsVisible="{Binding AudioLoadError, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
+
                 <Border IsVisible="{Binding HasLessonAudio}"
-                        Padding="20" StrokeShape="RoundRectangle 16"
-                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource Gray600}}" BackgroundColor="White">
-                    <Border.Shadow>
-                        <Shadow Brush="#00000010" Offset="0,2" Radius="8" />
-                    </Border.Shadow>
-                    <VerticalStackLayout Spacing="16">
-                        <HorizontalStackLayout Spacing="8">
-                            <Label Text="&#x1F3A7;" FontSize="20" VerticalOptions="Center" />
-                            <Label Text="Listen" FontSize="18" FontAttributes="Bold"
-                                   VerticalOptions="Center" TextColor="{StaticResource Primary}" />
-                        </HorizontalStackLayout>
+                        Padding="12" StrokeShape="RoundRectangle 12"
+                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}"
+                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource CardBackgroundDark}}">
+                    <Grid IsVisible="{Binding IsAudioLoading, Converter={StaticResource InvertedBoolConverter}}"
+                          ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+                          VerticalOptions="Center">
+                            <!-- Play button -->
+                            <Border Grid.Column="0"
+                                    WidthRequest="40" HeightRequest="40"
+                                    StrokeShape="RoundRectangle 20"
+                                    Stroke="Transparent"
+                                    StrokeThickness="0"
+                                    BackgroundColor="{StaticResource Primary}"
+                                    VerticalOptions="Center">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding TogglePlayCommand}" />
+                                </Border.GestureRecognizers>
+                                <Image WidthRequest="22" HeightRequest="22"
+                                       HorizontalOptions="Center" VerticalOptions="Center">
+                                    <Image.Source>
+                                        <FontImageSource Glyph="{Binding PlayButtonGlyph}"
+                                                         FontFamily="MaterialIcons"
+                                                         Color="White" Size="22" />
+                                    </Image.Source>
+                                </Image>
+                            </Border>
 
-                        <ActivityIndicator IsRunning="{Binding IsAudioLoading}"
-                                           IsVisible="{Binding IsAudioLoading}"
-                                           Color="{StaticResource Primary}" />
-
-                        <Label Text="{Binding AudioLoadError}" TextColor="Red" FontSize="13"
-                               IsVisible="{Binding AudioLoadError, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
-
-                        <!-- Custom audio player UI -->
-                        <Border IsVisible="{Binding IsAudioLoading, Converter={StaticResource InvertedBoolConverter}}"
-                                StrokeShape="RoundRectangle 14"
-                                StrokeThickness="0"
-                                Padding="20"
-                                BackgroundColor="#F0EDFA">
-                            <VerticalStackLayout Spacing="14">
-                                <Border WidthRequest="56" HeightRequest="56"
-                                        StrokeShape="RoundRectangle 28"
-                                        StrokeThickness="0"
-                                        BackgroundColor="{StaticResource Primary}"
-                                        HorizontalOptions="Center">
-                                    <Border.Shadow>
-                                        <Shadow Brush="{StaticResource Primary}" Offset="0,4" Radius="12" Opacity="0.3" />
-                                    </Border.Shadow>
-                                    <Border.GestureRecognizers>
-                                        <TapGestureRecognizer Command="{Binding TogglePlayCommand}" />
-                                    </Border.GestureRecognizers>
-                                    <Image WidthRequest="26" HeightRequest="26"
-                                           HorizontalOptions="Center" VerticalOptions="Center">
-                                        <Image.Source>
-                                            <FontImageSource Glyph="{Binding PlayButtonGlyph}"
-                                                             FontFamily="MaterialIcons"
-                                                             Color="White" Size="26" />
-                                        </Image.Source>
-                                    </Image>
-                                </Border>
-
+                            <!-- Label + progress -->
+                            <VerticalStackLayout Grid.Column="1" Spacing="6"
+                                                 VerticalOptions="Center">
+                                <Label Text="Listen to the pronunciation"
+                                       FontSize="13"
+                                       TextColor="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}"
+                                       LineBreakMode="TailTruncation" />
                                 <ProgressBar Progress="{Binding AudioProgress}"
                                              ProgressColor="{StaticResource Primary}"
                                              BackgroundColor="#D6CFF0"
                                              HeightRequest="4" />
-
-                                <Grid ColumnDefinitions="*,*">
-                                    <Label Text="{Binding AudioCurrentTime}"
-                                           FontSize="12" TextColor="{StaticResource Gray500}" />
-                                    <Label Grid.Column="1" Text="{Binding AudioDuration}"
-                                           FontSize="12" TextColor="{StaticResource Gray500}"
-                                           HorizontalOptions="End" />
-                                </Grid>
                             </VerticalStackLayout>
-                        </Border>
-                    </VerticalStackLayout>
+
+                            <!-- Time -->
+                            <Label Grid.Column="2"
+                                   Text="{Binding AudioTimeDisplay}"
+                                   FontSize="12"
+                                   TextColor="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}"
+                                   VerticalOptions="Center" />
+                    </Grid>
                 </Border>
 
                 <!-- Continue Button -->

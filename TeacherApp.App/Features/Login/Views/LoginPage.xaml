@@ -5,7 +5,7 @@
              x:Class="TeacherApp.App.Features.Login.Views.LoginPage"
              x:DataType="vm:LoginViewModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}">
+             BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PageBackgroundDark}}">
 
     <ScrollView BackgroundColor="Transparent">
         <VerticalStackLayout Spacing="20" Padding="30" VerticalOptions="Center">
@@ -52,7 +52,7 @@
                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark=White}" />
                 <Border Padding="0" StrokeShape="RoundRectangle 12"
                         Stroke="{StaticResource Gray200}" StrokeThickness="1"
-                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource OffBlack}}">
+                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource PageBackgroundDark}}">
                     <Grid ColumnDefinitions="48,*" HeightRequest="52">
                         <Image Grid.Column="0" WidthRequest="20" HeightRequest="20"
                                HorizontalOptions="Center" VerticalOptions="Center">
@@ -81,7 +81,7 @@
                         IsVisible="false"
                         StrokeShape="RoundRectangle 10"
                         Stroke="{StaticResource Gray200}" StrokeThickness="1"
-                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource OffBlack}}"
+                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource PageBackgroundDark}}"
                         Padding="4">
                     <Border.Shadow>
                         <Shadow Brush="#00000020" Offset="0,2" Radius="6" />
@@ -124,7 +124,7 @@
                        TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark=White}" />
                 <Border Padding="0" StrokeShape="RoundRectangle 12"
                         Stroke="{StaticResource Gray200}" StrokeThickness="1"
-                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource OffBlack}}">
+                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource PageBackgroundDark}}">
                     <Grid ColumnDefinitions="48,*" HeightRequest="52">
                         <Image Grid.Column="0" WidthRequest="20" HeightRequest="20"
                                HorizontalOptions="Center" VerticalOptions="Center">

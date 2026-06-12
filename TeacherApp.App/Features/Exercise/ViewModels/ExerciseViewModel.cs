@@ -10,6 +10,7 @@ namespace TeacherApp.App.Features.Exercise.ViewModels;
 
 [QueryProperty(nameof(ModuleId), "moduleId")]
 [QueryProperty(nameof(LessonId), "lessonId")]
+[QueryProperty(nameof(ModuleTitle), "moduleTitle")]
 public partial class ExerciseViewModel(CatalogService catalog, ExerciseService exerciseService) : ObservableObject, ICleanup
 {
     private CancellationTokenSource? _cts;
@@ -20,6 +21,9 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
 
     [ObservableProperty]
     private string _lessonId = "";
+
+    [ObservableProperty]
+    private string _moduleTitle = "";
 
     [ObservableProperty]
     private bool _isBusy;
@@ -48,12 +52,21 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
     [ObservableProperty]
     private string _questionLabel = "";
 
+    [ObservableProperty]
+    private bool _isHintVisible;
+
+    public string HintToggleLabel => IsHintVisible ? "Hide hint" : "Show hint";
+
+    public string HintChevronGlyph => IsHintVisible ? "\ue5ce" : "\ue5cf";
+
     public ObservableCollection<ExerciseStudentResponse> Exercises { get; } = [];
 
     public ExerciseStudentResponse? CurrentExercise =>
         CurrentIndex >= 0 && CurrentIndex < Exercises.Count ? Exercises[CurrentIndex] : null;
 
     public ObservableCollection<SegmentState> Segments { get; } = [];
+
+    public Func<Task>? BeforeNavigateToResults { get; set; }
 
     [RelayCommand]
     private async Task LoadAsync()
@@ -88,6 +101,7 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
             Answer = "";
             LastResult = null;
             Explanation = null;
+            IsHintVisible = false;
             _loadedKey = key;
 
             RebuildSegments();
@@ -109,6 +123,9 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
     [RelayCommand]
     private async Task SubmitAsync()
     {
+        if (IsBusy || LastResult is not null)
+            return;
+
         if (string.IsNullOrWhiteSpace(Answer) || CurrentExercise is null)
         {
             Error = "Digite uma resposta.";
@@ -138,17 +155,43 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
     }
 
     [RelayCommand]
+    private void ToggleHint() => IsHintVisible = !IsHintVisible;
+
+    partial void OnIsHintVisibleChanged(bool value)
+    {
+        OnPropertyChanged(nameof(HintToggleLabel));
+        OnPropertyChanged(nameof(HintChevronGlyph));
+    }
+
+    [RelayCommand]
     private async Task NextAsync()
     {
+        if (IsBusy)
+            return;
+
         LastResult = null;
         Explanation = null;
         Answer = "";
+        IsHintVisible = false;
         CurrentIndex++;
 
         if (CurrentIndex >= Exercises.Count)
         {
-            await Shell.Current.GoToAsync(
-                $"results?moduleId={ModuleId}&lessonId={LessonId}&correct={CorrectCount}&total={TotalExercises}");
+            IsBusy = true;
+            try
+            {
+                if (BeforeNavigateToResults is not null)
+                    await BeforeNavigateToResults();
+
+                var moduleTitle = Uri.EscapeDataString(ModuleTitle);
+                await Shell.Current.GoToAsync(
+                    $"results?moduleId={ModuleId}&lessonId={LessonId}&correct={CorrectCount}&total={TotalExercises}&moduleTitle={moduleTitle}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+
             return;
         }
 
@@ -161,7 +204,7 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
     {
         Segments.Clear();
         for (int i = 0; i < TotalExercises; i++)
-            Segments.Add(new SegmentState { Color = i == 0 ? Color.FromArgb("#512BD4") : Color.FromArgb("#E0E0E0") });
+            Segments.Add(new SegmentState { Color = i == 0 ? Color.FromArgb("#4F7CFF") : Color.FromArgb("#E0E0E0") });
     }
 
     private void UpdateSegment(int index, bool? isCorrect)
@@ -169,11 +212,11 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
         if (index >= Segments.Count) return;
 
         if (isCorrect == true)
-            Segments[index] = new SegmentState { Color = Color.FromArgb("#4CAF50") };
+            Segments[index] = new SegmentState { Color = Color.FromArgb("#10B981") };
         else if (isCorrect == false)
             Segments[index] = new SegmentState { Color = Color.FromArgb("#F44336") };
         else
-            Segments[index] = new SegmentState { Color = Color.FromArgb("#512BD4") };
+            Segments[index] = new SegmentState { Color = Color.FromArgb("#4F7CFF") };
     }
 
     private void UpdateQuestionLabel()
@@ -183,6 +226,7 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
 
     public void Cleanup()
     {
+        BeforeNavigateToResults = null;
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;

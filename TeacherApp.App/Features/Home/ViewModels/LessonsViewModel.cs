@@ -13,7 +13,7 @@ public partial class LessonsViewModel(CatalogService catalog) : ObservableObject
     private bool _hasLoaded;
 
     [ObservableProperty]
-    private bool _isBusy;
+    private bool _isRefreshing;
 
     [ObservableProperty]
     private string? _error;
@@ -21,17 +21,24 @@ public partial class LessonsViewModel(CatalogService catalog) : ObservableObject
     public ObservableCollection<ModuleResponse> Modules { get; } = [];
 
     [RelayCommand]
-    private async Task LoadAsync()
+    private Task LoadAsync() => LoadInternalAsync(forceRefresh: false);
+
+    [RelayCommand]
+    private Task RefreshAsync() => LoadInternalAsync(forceRefresh: true);
+
+    private async Task LoadInternalAsync(bool forceRefresh)
     {
-        if (_hasLoaded && Modules.Count > 0)
+        if (!forceRefresh && _hasLoaded && Modules.Count > 0)
+        {
+            IsRefreshing = false;
             return;
+        }
 
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
         var ct = _cts.Token;
 
-        IsBusy = true;
         Error = null;
 
         try
@@ -56,8 +63,7 @@ public partial class LessonsViewModel(CatalogService catalog) : ObservableObject
         }
         finally
         {
-            if (!ct.IsCancellationRequested)
-                IsBusy = false;
+            IsRefreshing = false;
         }
     }
 
@@ -72,6 +78,6 @@ public partial class LessonsViewModel(CatalogService catalog) : ObservableObject
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
-        IsBusy = false;
+        IsRefreshing = false;
     }
 }
