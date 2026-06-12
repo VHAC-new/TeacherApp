@@ -11,7 +11,7 @@
 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-4">
     <div>
         <MudText Typo="Typo.h4">Student Performance</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">Monitor student activity and review their answers</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Monitor student activity and review their answers</MudText>
     </div>
     <MudButton Variant="Variant.Filled"
                Color="Color.Primary"
@@ -43,7 +43,7 @@
 }
 else if (FilteredStudents.Count == 0)
 {
-    <MudText Typo="Typo.body1" Color="Color.Secondary">
+    <MudText Typo="Typo.body1" Class="mud-text-secondary">
         @(string.IsNullOrWhiteSpace(_searchTerm) ? "No students found." : "No results for the search.")
     </MudText>
 }

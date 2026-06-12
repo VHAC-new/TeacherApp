@@ -7,6 +7,7 @@ namespace TeacherApp.App.Features.Exercise.ViewModels;
 [QueryProperty(nameof(LessonId), "lessonId")]
 [QueryProperty(nameof(Correct), "correct")]
 [QueryProperty(nameof(Total), "total")]
+[QueryProperty(nameof(ModuleTitle), "moduleTitle")]
 public partial class ResultsViewModel : ObservableObject
 {
     [ObservableProperty]
@@ -14,6 +15,9 @@ public partial class ResultsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _lessonId = "";
+
+    [ObservableProperty]
+    private string _moduleTitle = "";
 
     [ObservableProperty]
     private string _correct = "0";
@@ -40,7 +44,7 @@ public partial class ResultsViewModel : ObservableObject
     private string _trophy = "\uD83C\uDFC6";
 
     [ObservableProperty]
-    private Color _headlineColor = Color.FromArgb("#512BD4");
+    private Color _headlineColor = Color.FromArgb("#4F7CFF");
 
     partial void OnCorrectChanged(string value) => RecalculateScore();
     partial void OnTotalChanged(string value) => RecalculateScore();
@@ -58,7 +62,7 @@ public partial class ResultsViewModel : ObservableObject
         {
             Headline = "Excellent Work!";
             Trophy = "\uD83C\uDFC6";
-            HeadlineColor = Color.FromArgb("#4CAF50");
+            HeadlineColor = Color.FromArgb("#10B981");
         }
         else if (ScorePercent >= 50)
         {
@@ -77,7 +81,8 @@ public partial class ResultsViewModel : ObservableObject
     [RelayCommand]
     private async Task ContinueLearning()
     {
-        await Shell.Current.GoToAsync("//main/home");
+        await Shell.Current.GoToAsync(
+            $"//lessons/module?moduleId={ModuleId}&title={Uri.EscapeDataString(ModuleTitle)}");
     }
 
     [RelayCommand]

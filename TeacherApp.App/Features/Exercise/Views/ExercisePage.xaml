@@ -4,20 +4,21 @@
              xmlns:vm="clr-namespace:TeacherApp.App.Features.Exercise.ViewModels"
              x:Class="TeacherApp.App.Features.Exercise.Views.ExercisePage"
              x:DataType="vm:ExerciseViewModel"
-             Shell.NavBarIsVisible="False">
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
 
-    <Grid RowDefinitions="Auto,*">
+    <Grid x:Name="PageRoot" RowDefinitions="Auto,*">
 
         <!-- Gradient Header -->
-        <Grid Grid.Row="0" Padding="20,50,20,20" MinimumHeightRequest="140">
+        <Grid Grid.Row="0" Padding="20,16,20,20" MinimumHeightRequest="120">
             <Grid.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#512BD4" Offset="0.0" />
-                    <GradientStop Color="#2B0B98" Offset="1.0" />
+                    <GradientStop Color="{StaticResource Primary}" Offset="0.0" />
+                    <GradientStop Color="{StaticResource Tertiary}" Offset="1.0" />
                 </LinearGradientBrush>
             </Grid.Background>
 
-            <VerticalStackLayout Spacing="14" VerticalOptions="End">
+            <VerticalStackLayout Spacing="8" VerticalOptions="End">
                 <HorizontalStackLayout Spacing="12">
                     <Label Text="&#x2190;" TextColor="White" FontSize="24"
                            VerticalOptions="Center">
@@ -47,7 +48,8 @@
         </Grid>
 
         <!-- Content -->
-        <ScrollView Grid.Row="1">
+        <ScrollView Grid.Row="1"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
             <VerticalStackLayout Spacing="16" Padding="16,20,16,32">
 
                 <Label Text="{Binding Error}" TextColor="Red" FontSize="14"
@@ -55,29 +57,58 @@
 
                 <!-- Question Card -->
                 <Border Padding="20" StrokeShape="RoundRectangle 14"
-                        Stroke="{StaticResource Gray200}" BackgroundColor="{StaticResource Secondary}">
+                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource CardBackgroundDark}}">
                     <Label Text="{Binding CurrentExercise.Prompt}" FontSize="18"
-                           LineBreakMode="WordWrap" />
-                </Border>
-
-                <!-- Hint -->
-                <Border Padding="16" StrokeShape="RoundRectangle 12"
-                        Stroke="Transparent" BackgroundColor="#FFF3E0"
-                        IsVisible="{Binding CurrentExercise.Hint, Converter={StaticResource IsNotNullOrEmptyConverter}}">
-                    <HorizontalStackLayout Spacing="8">
-                        <Label Text="&#x1F4A1;" FontSize="16" VerticalOptions="Start" />
-                        <Label Text="{Binding CurrentExercise.Hint}" FontSize="14"
-                               TextColor="#E65100" LineBreakMode="WordWrap"
-                               VerticalOptions="Center" />
-                    </HorizontalStackLayout>
+                           LineBreakMode="WordWrap"
+                           TextColor="{AppThemeBinding Light={StaticResource Foreground}, Dark={StaticResource ForegroundDark}}" />
                 </Border>
 
                 <!-- Answer Input -->
-                <Entry Placeholder="Type your answer..."
-                       Text="{Binding Answer}"
-                       ReturnType="Send"
-                       FontSize="16"
-                       IsEnabled="{Binding LastResult, Converter={StaticResource IsNullConverter}}" />
+                <Border Padding="4,0" StrokeShape="RoundRectangle 12"
+                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}"
+                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource CardBackgroundDark}}">
+                    <Entry Placeholder="Type your answer here..."
+                           Text="{Binding Answer}"
+                           ReturnType="Send"
+                           FontSize="16"
+                           Margin="12,0"
+                           TextColor="{AppThemeBinding Light={StaticResource Foreground}, Dark={StaticResource ForegroundDark}}"
+                           PlaceholderColor="{StaticResource MutedForeground}"
+                           IsEnabled="{Binding LastResult, Converter={StaticResource IsNullConverter}}" />
+                </Border>
+
+                <!-- Collapsible Hint -->
+                <Border StrokeShape="RoundRectangle 12"
+                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}"
+                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource CardBackgroundDark}}"
+                        IsVisible="{Binding CurrentExercise.Hint, Converter={StaticResource IsNotNullOrEmptyConverter}}">
+                    <VerticalStackLayout Spacing="0">
+                        <Grid Padding="16,14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding ToggleHintCommand}" />
+                            </Grid.GestureRecognizers>
+                            <Label Grid.Column="0" Text="&#x1F4A1;" FontSize="18" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding HintToggleLabel}" FontSize="15"
+                                   TextColor="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}"
+                                   VerticalOptions="Center" />
+                            <Label Grid.Column="2" Text="{Binding HintChevronGlyph}"
+                                   FontFamily="MaterialIcons" FontSize="22"
+                                   TextColor="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}"
+                                   VerticalOptions="Center" HorizontalOptions="End" />
+                        </Grid>
+                        <Border x:Name="HintContent"
+                                IsVisible="False"
+                                Padding="16,12"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 0,0,12,12"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource SecondaryDark}}">
+                            <Label Text="{Binding CurrentExercise.Hint}" FontSize="14"
+                                   TextColor="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}"
+                                   LineBreakMode="WordWrap" />
+                        </Border>
+                    </VerticalStackLayout>
+                </Border>
 
                 <!-- Result Feedback -->
                 <Border IsVisible="{Binding LastResult, Converter={StaticResource IsNotNullConverter}}"
@@ -123,6 +154,7 @@
                 <Button Text="Next Question"
                         Command="{Binding NextCommand}"
                         IsVisible="{Binding LastResult, Converter={StaticResource IsNotNullConverter}}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"
                         BackgroundColor="{StaticResource Tertiary}"
                         TextColor="White" FontAttributes="Bold" FontSize="16"
                         HeightRequest="54" CornerRadius="12" />

@@ -20,6 +20,14 @@ public sealed class AuthService(HttpClient http, TokenStore tokenStore)
         await http.GetFromJsonAsync<MeResponse>("api/v1/auth/me", ct)
         ?? throw new InvalidOperationException("Resposta inesperada do servidor.");
 
+    public async Task ChangePasswordAsync(string currentPassword, string newPassword, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync(
+            "api/v1/auth/change-password",
+            new ChangePasswordRequest(currentPassword, newPassword), ct);
+        response.EnsureSuccessStatusCode();
+    }
+
     public void Logout() => tokenStore.Clear();
     public bool IsAuthenticated => tokenStore.IsAuthenticated;
 }

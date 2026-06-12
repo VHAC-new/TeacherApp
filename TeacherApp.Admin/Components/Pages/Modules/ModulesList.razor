@@ -9,7 +9,7 @@
 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-4">
     <div>
         <MudText Typo="Typo.h4">Módulos</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">Gerencie o conteúdo dos módulos</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Gerencie o conteúdo dos módulos</MudText>
     </div>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenForm(null))">Novo Módulo</MudButton>
 </MudStack>
@@ -37,7 +37,7 @@
 }
 else if (FilteredModules.Count == 0)
 {
-    <MudText Typo="Typo.body1" Color="Color.Secondary">
+    <MudText Typo="Typo.body1" Class="mud-text-secondary">
         @(string.IsNullOrWhiteSpace(_searchTerm)
             ? "Nenhum módulo cadastrado."
             : "Nenhum resultado para a busca.")
@@ -78,7 +78,7 @@ else
             <MudStack Spacing="3">
                 <MudTextField @bind-Value="_form.Title" For="@(() => _form.Title)" Label="Título" Variant="Variant.Outlined" />
                 <MudTextField @bind-Value="_form.Description" Label="Descrição" Variant="Variant.Outlined" Lines="3" />
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Descrição apresentada aos alunos</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Descrição apresentada aos alunos</MudText>
                 <MudNumericField @bind-Value="_form.Order" Label="Ordem" Variant="Variant.Outlined" Min="0" />
                 @if (!string.IsNullOrEmpty(_formError))
                 {

@@ -6,6 +6,7 @@
 
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject IDialogService DialogService
 
 <PageTitle>Student Details — TeacherApp Admin</PageTitle>
 
@@ -37,7 +38,7 @@ else
                 <MudText Typo="Typo.h5" Style="font-weight:600;">
                     @StudentDisplay.GetDisplayName(_details.FullName, _details.Email)
                 </MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@_details.Email</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">@_details.Email</MudText>
             </div>
         </div>
     </MudPaper>
@@ -46,31 +47,44 @@ else
         <MudText Typo="Typo.h6" Class="mb-4">Student profile</MudText>
         <MudGrid Spacing="3">
             <MudItem xs="12" sm="6">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">CPF</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">CPF</MudText>
                 <MudText Typo="Typo.body1">@FormatCpfDisplay(_details.Cpf)</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Date of birth</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Date of birth</MudText>
                 <MudText Typo="Typo.body1">@(_details.BirthDate?.ToString("yyyy-MM-dd") ?? "—")</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Phone</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Phone</MudText>
                 <MudText Typo="Typo.body1">@_details.Phone</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Account status</MudText>
-                <MudText Typo="Typo.body1">@(_details.IsActive ? "Active" : "Inactive")</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Account status</MudText>
+                <div class="d-flex align-center flex-wrap gap-3 mt-1">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Color="@(_details.IsActive ? Color.Success : Color.Default)"
+                             Variant="Variant.Filled">
+                        @(_details.IsActive ? "Ativo" : "Inativo")
+                    </MudChip>
+                    <MudSwitch T="bool"
+                               Value="_details.IsActive"
+                               ValueChanged="OnActiveStatusChanged"
+                               Disabled="_savingStatus"
+                               Color="Color.Primary"
+                               Label="@(_details.IsActive ? "Acesso habilitado" : "Acesso desabilitado")" />
+                </div>
             </MudItem>
             <MudItem xs="12" sm="4">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">CEP</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">CEP</MudText>
                 <MudText Typo="Typo.body1">@_details.PostalCode</MudText>
             </MudItem>
             <MudItem xs="12" sm="8">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Address</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Address</MudText>
                 <MudText Typo="Typo.body1">@_details.Address</MudText>
             </MudItem>
             <MudItem xs="12">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Course</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Course</MudText>
                 <MudText Typo="Typo.body1">@_details.Course</MudText>
             </MudItem>
         </MudGrid>
@@ -80,7 +94,7 @@ else
         <MudItem xs="12" sm="4">
             <MudCard Class="rounded-xl" Style="border: 1px solid var(--mud-palette-lines-default);" Elevation="0">
                 <MudCardContent Class="pa-5">
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Total Exercises</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Total Exercises</MudText>
                     <MudText Typo="Typo.h4" Class="mt-1">@_details.TotalExercises</MudText>
                 </MudCardContent>
             </MudCard>
@@ -88,13 +102,13 @@ else
         <MudItem xs="12" sm="4">
             <MudCard Class="rounded-xl" Style="border: 1px solid var(--mud-palette-lines-default);" Elevation="0">
                 <MudCardContent Class="pa-5">
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Accuracy Rate</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Accuracy Rate</MudText>
                     <div class="d-flex align-end gap-2 mt-1">
                         <MudText Typo="Typo.h4"
                                  Color="@StudentDisplay.GetAccuracyColor(_details.AccuracyPercent)">
                             @($"{_details.AccuracyPercent:0}%")
                         </MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-1">
                             (@_details.CorrectCount correct, @_details.IncorrectCount incorrect)
                         </MudText>
                     </div>
@@ -104,7 +118,7 @@ else
         <MudItem xs="12" sm="4">
             <MudCard Class="rounded-xl" Style="border: 1px solid var(--mud-palette-lines-default);" Elevation="0">
                 <MudCardContent Class="pa-5">
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Last Activity</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Last Activity</MudText>
                     <MudText Typo="Typo.h4" Class="mt-1">@FormatDate(_details.LastActivity)</MudText>
                 </MudCardContent>
             </MudCard>
@@ -164,7 +178,7 @@ else
         }
         else if (SortedAnswers.Count == 0)
         {
-            <MudText Typo="Typo.body2" Color="Color.Secondary">No answers found.</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">No answers found.</MudText>
         }
         else
         {
@@ -211,7 +225,7 @@ else
                     <MudTd DataLabel="Module / Lesson">
                         <div>
                             <MudText Typo="Typo.body2" Style="font-weight:500;">@context.ModuleTitle</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.LessonTitle</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.LessonTitle</MudText>
                         </div>
                     </MudTd>
                     <MudTd DataLabel="Date">@context.AttemptedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
@@ -234,6 +248,7 @@ else
     private List<ModuleResponse> _modules = [];
     private bool _loading = true;
     private bool _answersLoading;
+    private bool _savingStatus;
     private string? _error;
 
     private Guid? _filterModuleId;
@@ -306,6 +321,66 @@ else
     {
         _filterIsCorrect = value;
         await LoadAnswersAsync();
+    }
+
+    private async Task OnActiveStatusChanged(bool isActive)
+    {
+        if (_details is null || _savingStatus)
+            return;
+
+        if (!isActive)
+        {
+            var confirm = await DialogService.ShowMessageBoxAsync(
+                "Desativar acesso",
+                "O aluno não poderá fazer login no aplicativo enquanto estiver inativo. Deseja continuar?",
+                yesText: "Desativar",
+                cancelText: "Cancelar");
+            if (confirm != true)
+            {
+                StateHasChanged();
+                return;
+            }
+        }
+
+        _savingStatus = true;
+        _error = null;
+        var previousActive = _details.IsActive;
+        try
+        {
+            var response = await Http.PutAsJsonAsync(
+                $"api/v1/admin/students/{Id}/active",
+                new SetStudentActiveRequest(isActive));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _error = response.StatusCode switch
+                {
+                    System.Net.HttpStatusCode.NotFound =>
+                        "Aluno não encontrado ou endpoint indisponível. Reinicie a API com a versão mais recente.",
+                    System.Net.HttpStatusCode.MethodNotAllowed =>
+                        "Operação não permitida pelo servidor. Verifique se a API está atualizada.",
+                    System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden =>
+                        "Sessão expirada. Faça login novamente.",
+                    _ => $"Não foi possível atualizar o status ({(int)response.StatusCode}). {body}"
+                };
+                _details = _details with { IsActive = previousActive };
+                return;
+            }
+
+            _details = await response.Content.ReadFromJsonAsync<AdminStudentDetailsResponse>()
+                ?? _details with { IsActive = isActive };
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro de conexão com a API. Verifique se o servidor está em execução.";
+            _details = _details with { IsActive = previousActive };
+        }
+        finally
+        {
+            _savingStatus = false;
+            StateHasChanged();
+        }
     }
 
     private static string FormatDate(DateTimeOffset? date)

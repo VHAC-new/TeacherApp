@@ -9,7 +9,7 @@ public static class AdminThemes
         PaletteLight = new PaletteLight
         {
             Primary = "#4F7CFF",
-            Secondary = "#5c6bc0",
+            Secondary = "#E8EEFF",
             Background = "#F8F9FB",
             Surface = "#FFFFFF",
             AppbarBackground = "#4F7CFF",
@@ -19,23 +19,27 @@ public static class AdminThemes
             Divider = "#E5E7EB",
             TextPrimary = "#1A1D29",
             TextSecondary = "#6B7280",
-            Success = "#2e7d32",
+            Success = "#10B981",
             Warning = "#f57c00",
-            Error = "#c62828",
+            Error = "#EF4444",
             Info = "#0277bd"
         },
         PaletteDark = new PaletteDark
         {
-            Primary = "#90caf9",
-            Secondary = "#9fa8da",
-            AppbarBackground = "#1e1e1e",
-            Background = "#121212",
-            Surface = "#1e1e1e",
-            DrawerBackground = "#1e1e1e",
-            DrawerText = "rgba(255,255,255,.87)",
-            Success = "#81c784",
+            Primary = "#4F7CFF",
+            Secondary = "#1E2540",
+            Background = "#0F1117",
+            Surface = "#1A1E2E",
+            AppbarBackground = "#1A1E2E",
+            DrawerBackground = "#131724",
+            DrawerText = "#E8ECF4",
+            TextPrimary = "#E8ECF4",
+            TextSecondary = "#8892A4",
+            LinesDefault = "#2A3050",
+            Divider = "#2A3050",
+            Success = "#10B981",
             Warning = "#ffb74d",
-            Error = "#e57373",
+            Error = "#EF4444",
             Info = "#4fc3f7"
         }
     };

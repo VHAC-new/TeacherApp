@@ -25,6 +25,9 @@ public partial class ModuleViewModel(CatalogService catalog, ProgressService pro
     private bool _isBusy;
 
     [ObservableProperty]
+    private bool _isRefreshing;
+
+    [ObservableProperty]
     private string? _error;
 
     [ObservableProperty]
@@ -42,13 +45,24 @@ public partial class ModuleViewModel(CatalogService catalog, ProgressService pro
     public ObservableCollection<LessonWithProgress> Lessons { get; } = [];
 
     [RelayCommand]
-    private async Task LoadAsync()
+    private Task LoadAsync() => LoadInternalAsync(forceRefresh: false);
+
+    [RelayCommand]
+    private Task RefreshAsync() => LoadInternalAsync(forceRefresh: true);
+
+    private async Task LoadInternalAsync(bool forceRefresh)
     {
         if (!Guid.TryParse(ModuleId, out var id))
+        {
+            IsRefreshing = false;
             return;
+        }
 
-        if (Lessons.Count > 0 && _loadedModuleId == ModuleId)
+        if (!forceRefresh && Lessons.Count > 0 && _loadedModuleId == ModuleId)
+        {
+            IsRefreshing = false;
             return;
+        }
 
         _cts?.Cancel();
         _cts?.Dispose();
@@ -94,6 +108,7 @@ public partial class ModuleViewModel(CatalogService catalog, ProgressService pro
         }
         finally
         {
+            IsRefreshing = false;
             if (!ct.IsCancellationRequested)
                 IsBusy = false;
         }
@@ -102,10 +117,20 @@ public partial class ModuleViewModel(CatalogService catalog, ProgressService pro
     [RelayCommand]
     private async Task NavigateToLesson(LessonWithProgress lesson)
     {
+        if (lesson.IsLocked)
+        {
+            await Shell.Current.DisplayAlert(
+                "Lição bloqueada",
+                "Complete a lição anterior primeiro.",
+                "OK");
+            return;
+        }
+
         var desc = Uri.EscapeDataString(lesson.Description ?? "");
         var audio = lesson.AudioMediaId is { } aid ? $"&audioMediaId={aid}" : "";
+        var moduleTitle = Uri.EscapeDataString(Title);
         await Shell.Current.GoToAsync(
-            $"lesson?moduleId={ModuleId}&lessonId={lesson.Id}&title={Uri.EscapeDataString(lesson.Title)}&description={desc}{audio}");
+            $"lesson?moduleId={ModuleId}&lessonId={lesson.Id}&title={Uri.EscapeDataString(lesson.Title)}&description={desc}&moduleTitle={moduleTitle}{audio}");
     }
 
     [RelayCommand]
@@ -120,6 +145,8 @@ public partial class ModuleViewModel(CatalogService catalog, ProgressService pro
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
+        _loadedModuleId = null;
         IsBusy = false;
+        IsRefreshing = false;
     }
 }

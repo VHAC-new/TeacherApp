@@ -12,7 +12,7 @@
 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-4">
     <div>
         <MudText Typo="Typo.h4">Dashboard</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">Welcome back!</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Welcome back!</MudText>
     </div>
 </MudStack>
 
@@ -42,7 +42,7 @@ else
                         </MudPaper>
                     </div>
                     <MudText Typo="Typo.h4">@_stats.TotalStudents</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Total Students</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Total Students</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -57,7 +57,7 @@ else
                         </MudPaper>
                     </div>
                     <MudText Typo="Typo.h4">@_stats.TotalModules</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Total Modules</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Total Modules</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -72,7 +72,7 @@ else
                         </MudPaper>
                     </div>
                     <MudText Typo="Typo.h4">@_stats.TotalLessons</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Total Lessons</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Total Lessons</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -98,7 +98,7 @@ else
         }
         else if (_completions.Count == 0)
         {
-            <MudText Typo="Typo.body2" Color="Color.Secondary">Nenhuma lição concluída encontrada.</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">Nenhuma lição concluída encontrada.</MudText>
         }
         else
         {
@@ -113,7 +113,7 @@ else
                     <MudTd DataLabel="Aluno">
                         <div>
                             <MudText Typo="Typo.body2" Style="font-weight:500;">@context.StudentFullName</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.StudentEmail</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.StudentEmail</MudText>
                         </div>
                     </MudTd>
                     <MudTd DataLabel="Módulo">@context.ModuleTitle</MudTd>

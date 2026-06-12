@@ -1,8 +1,11 @@
 ﻿using TeacherApp.App.Features.Exercise.Views;
 using TeacherApp.App.Features.Lesson.Views;
 using TeacherApp.App.Features.Module.Views;
+using TeacherApp.App.Features.Profile.Views;
 #if ANDROID
 using TeacherApp.App.Platforms.Android;
+#elif IOS
+using TeacherApp.App.Platforms.iOS;
 #endif
 
 namespace TeacherApp.App;
@@ -18,6 +21,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("exercise", typeof(ExercisePage));
         Routing.RegisterRoute("results", typeof(ResultsPage));
         Routing.RegisterRoute("final-exercises", typeof(FinalExercisesPage));
+        Routing.RegisterRoute("change-password", typeof(ChangePasswordPage));
 
         Navigated += OnShellNavigated;
     }
@@ -46,6 +50,10 @@ public partial class AppShell : Shell
         Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(100), () =>
             TabBarBorderHelper.ApplyToShell(Handler?.PlatformView));
         Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(400), () =>
+            TabBarBorderHelper.ApplyToShell(Handler?.PlatformView));
+#elif IOS
+        TabBarBorderHelper.ApplyToShell(Handler?.PlatformView);
+        Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(100), () =>
             TabBarBorderHelper.ApplyToShell(Handler?.PlatformView));
 #endif
     }

@@ -1,6 +1,6 @@
 html, body {
     font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    background-color: #F8F9FB;
+    background-color: var(--mud-palette-background, #F8F9FB);
 }
 
 .validation-message {

@@ -10,7 +10,7 @@
 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-4">
     <div>
         <MudText Typo="Typo.h4">Lições</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">Gerencie o conteúdo das lições</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Gerencie o conteúdo das lições</MudText>
     </div>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(async () => await OpenNewLessonAsync())" Disabled="@(_modules.Count == 0)">Nova Lição</MudButton>
 </MudStack>
@@ -54,7 +54,7 @@
 }
 else if (FilteredLessons.Count == 0)
 {
-    <MudText Typo="Typo.body1" Color="Color.Secondary">
+    <MudText Typo="Typo.body1" Class="mud-text-secondary">
         @(string.IsNullOrWhiteSpace(_searchTerm)
             ? "Nenhuma lição encontrada."
             : "Nenhum resultado para a busca.")
@@ -82,7 +82,7 @@ else
                 }
                 else
                 {
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">—</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">—</MudText>
                 }
             </MudTd>
             <MudTd DataLabel="Ações">
@@ -126,7 +126,7 @@ else
                 </MudSelect>
                 <MudTextField @bind-Value="_form.Description" Label="Conteúdo da lição" Variant="Variant.Outlined" Lines="10"
                               Placeholder="Escreva o conteúdo de leitura para os alunos..." />
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Material de leitura apresentado aos alunos</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Material de leitura apresentado aos alunos</MudText>
                 <MudNumericField @bind-Value="_form.Order" Label="Ordem" Variant="Variant.Outlined" Min="0" />
 
                 @* Audio File *@
@@ -135,9 +135,9 @@ else
                 {
                     <div @onclick="@(() => _showAudioPicker = true)"
                          style="border: 2px dashed var(--mud-palette-lines-default); border-radius: 8px; padding: 24px; text-align: center; cursor: pointer;">
-                        <MudIcon Icon="@Icons.Material.Filled.AudioFile" Size="Size.Large" Color="Color.Secondary" />
+                        <MudIcon Icon="@Icons.Material.Filled.AudioFile" Size="Size.Large" Class="mud-text-secondary" />
                         <MudText Typo="Typo.body1" Class="mt-2">Escolher áudio da biblioteca</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Selecione um arquivo de áudio já enviado na página Mídia</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Selecione um arquivo de áudio já enviado na página Mídia</MudText>
                     </div>
                 }
                 else
@@ -151,7 +151,7 @@ else
                                 <MudText Typo="Typo.subtitle2" Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                                     @(_form.AudioFileName ?? "Áudio selecionado")
                                 </MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@_form.AudioMediaId</MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@_form.AudioMediaId</MudText>
                             </MudStack>
                             <MudStack Row="true" Spacing="1">
                                 <MudTooltip Text="Reproduzir">
@@ -224,7 +224,7 @@ else
                       Class="mb-3" />
         @if (FilteredAudioMedia.Count == 0)
         {
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
+            <MudText Typo="Typo.body2" Class="mud-text-secondary pa-4" Align="Align.Center">
                 Nenhum áudio encontrado. Envie arquivos na página Mídia.
             </MudText>
         }
@@ -238,7 +238,7 @@ else
                             <MudIcon Icon="@Icons.Material.Filled.AudioFile" Size="Size.Small" Color="Color.Primary" />
                             <MudStack Spacing="0" Style="flex:1; min-width:0;">
                                 <MudText Typo="Typo.body2" Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@media.FileName</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@FormatBytes(media.SizeBytes)</MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@FormatBytes(media.SizeBytes)</MudText>
                             </MudStack>
                         </MudStack>
                     </MudListItem>

@@ -12,6 +12,9 @@ internal static class TabBarBorderHelper
     private const float TabBarMinHeightDp = 68f;
     private const float TabBarElevationDp = 10f;
 
+    private static readonly AColor LightBg = AColor.ParseColor("#FFFFFF");
+    private static readonly AColor DarkBg = AColor.ParseColor("#1A1E2E");
+
     public static void ApplyToShell(object? platformView)
     {
         if (platformView is not AndroidView root)
@@ -25,8 +28,13 @@ internal static class TabBarBorderHelper
         if (metrics is null)
             return;
 
-        bottomNav.SetBackgroundResource(Resource.Drawable.tabbar_top_border);
-        bottomNav.SetBackgroundColor(AColor.White);
+        bool isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
+        int drawableRes = isDark
+            ? Resource.Drawable.tabbar_top_border_dark
+            : Resource.Drawable.tabbar_top_border;
+        AColor bgColor = isDark ? DarkBg : LightBg;
+
+        bottomNav.SetBackgroundResource(drawableRes);
 
         var elevationPx = TypedValue.ApplyDimension(ComplexUnitType.Dip, TabBarElevationDp, metrics);
         bottomNav.Elevation = elevationPx;
@@ -42,17 +50,17 @@ internal static class TabBarBorderHelper
         var horizontalPad = (int)TypedValue.ApplyDimension(ComplexUnitType.Dip, 8f, metrics);
         bottomNav.SetPadding(horizontalPad, 0, horizontalPad, 0);
 
-        StyleParentChain(bottomNav);
+        StyleParentChain(bottomNav, bgColor);
     }
 
-    private static void StyleParentChain(BottomNavigationView bottomNav)
+    private static void StyleParentChain(BottomNavigationView bottomNav, AColor bgColor)
     {
         var current = bottomNav.Parent as AndroidView;
         var depth = 0;
 
         while (current is not null && depth < 4)
         {
-            current.SetBackgroundColor(AColor.White);
+            current.SetBackgroundColor(bgColor);
             current.Elevation = 0;
             current = current.Parent as AndroidView;
             depth++;

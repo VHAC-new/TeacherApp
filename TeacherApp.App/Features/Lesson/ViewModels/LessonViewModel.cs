@@ -11,6 +11,7 @@ namespace TeacherApp.App.Features.Lesson.ViewModels;
 [QueryProperty(nameof(Title), "title")]
 [QueryProperty(nameof(Description), "description")]
 [QueryProperty(nameof(AudioMediaId), "audioMediaId")]
+[QueryProperty(nameof(ModuleTitle), "moduleTitle")]
 public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : ObservableObject, ICleanup
 {
     private CancellationTokenSource? _cts;
@@ -36,6 +37,9 @@ public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : Obser
 
     [ObservableProperty]
     private string _audioMediaId = "";
+
+    [ObservableProperty]
+    private string _moduleTitle = "";
 
     [ObservableProperty]
     private bool _isBusy;
@@ -70,6 +74,8 @@ public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : Obser
     [ObservableProperty]
     private string _playButtonGlyph = PlayGlyph;
 
+    public string AudioTimeDisplay => $"{AudioCurrentTime} / {AudioDuration}";
+
     partial void OnDescriptionChanged(string value)
     {
         HasDescription = !string.IsNullOrWhiteSpace(value);
@@ -85,8 +91,7 @@ public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : Obser
     {
         try
         {
-            _audioPlayer?.Dispose();
-            _audioPlayer = null;
+            ReleaseAudioPlayer();
 
             var audioManager = AudioManager.Current;
 
@@ -107,6 +112,7 @@ public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : Obser
             _audioPlayer.PlaybackEnded += OnPlaybackEnded;
 
             AudioDuration = FormatTime(_audioPlayer.Duration);
+            OnPropertyChanged(nameof(AudioTimeDisplay));
         }
         catch
         {
@@ -123,6 +129,7 @@ public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : Obser
             AudioProgress = 0;
             AudioCurrentTime = "0:00";
             StopProgressTimer();
+            OnPropertyChanged(nameof(AudioTimeDisplay));
         });
     }
 
@@ -177,6 +184,7 @@ public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : Obser
         AudioProgress = duration > 0 ? current / duration : 0;
         AudioCurrentTime = FormatTime(current);
         AudioDuration = FormatTime(duration);
+        OnPropertyChanged(nameof(AudioTimeDisplay));
     }
 
     private static string FormatTime(double seconds)
@@ -197,6 +205,17 @@ public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : Obser
             IsPlaying = false;
             PlayButtonGlyph = PlayGlyph;
         }
+    }
+
+    private void ReleaseAudioPlayer()
+    {
+        if (_audioPlayer is null)
+            return;
+
+        _audioPlayer.PlaybackEnded -= OnPlaybackEnded;
+        try { _audioPlayer.Stop(); } catch { }
+        _audioPlayer.Dispose();
+        _audioPlayer = null;
     }
 
     [RelayCommand]
@@ -253,15 +272,15 @@ public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : Obser
     [RelayCommand]
     private async Task ContinueToExercises()
     {
+        var moduleTitle = Uri.EscapeDataString(ModuleTitle);
         await Shell.Current.GoToAsync(
-            $"exercise?moduleId={ModuleId}&lessonId={LessonId}");
+            $"exercise?moduleId={ModuleId}&lessonId={LessonId}&moduleTitle={moduleTitle}");
     }
 
     public void Cleanup()
     {
-        StopAudio();
-        _audioPlayer?.Dispose();
-        _audioPlayer = null;
+        StopProgressTimer();
+        ReleaseAudioPlayer();
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;

@@ -100,6 +100,9 @@ public partial class FinalExercisesViewModel(CatalogService catalog, ExerciseSer
     [RelayCommand]
     private async Task SubmitAsync()
     {
+        if (IsBusy || LastResult is not null)
+            return;
+
         if (string.IsNullOrWhiteSpace(Answer) || CurrentExercise is null)
         {
             Error = "Digite uma resposta.";
