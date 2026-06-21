@@ -106,7 +106,7 @@ public partial class LoginViewModel(AuthService authService) : ObservableObject
                 return;
 
             SaveRecentEmail(Email);
-            await Shell.Current.GoToAsync("//home");
+            await Shell.Current.GoToAsync("//lessons");
         }
         catch (OperationCanceledException)
         {

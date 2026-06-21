@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:TeacherApp.App.Features.Profile.ViewModels"
+             x:Class="TeacherApp.App.Features.Profile.Views.SettingsPage"
+             x:DataType="vm:SettingsViewModel"
+             Shell.NavBarIsVisible="False"
+             Title="Configurações"
+             BackgroundColor="#0E0D24">
+
+    <ContentPage.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="0.3,1">
+            <GradientStop Color="#16133A" Offset="0.0" />
+            <GradientStop Color="#12112A" Offset="0.5" />
+            <GradientStop Color="#0E0D24" Offset="1.0" />
+        </LinearGradientBrush>
+    </ContentPage.Background>
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Cabeçalho: voltar + título -->
+        <HorizontalStackLayout Grid.Row="0" Spacing="12" Padding="16,18,16,8" VerticalOptions="Center">
+            <Image WidthRequest="24" HeightRequest="24" VerticalOptions="Center">
+                <Image.Source>
+                    <FontImageSource Glyph="&#xe5c4;" FontFamily="MaterialIcons" Color="White" Size="24" />
+                </Image.Source>
+                <Image.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnBackTapped" />
+                </Image.GestureRecognizers>
+            </Image>
+            <Label Text="Configurações" FontSize="22" FontAttributes="Bold" TextColor="White"
+                   VerticalOptions="Center" />
+        </HorizontalStackLayout>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="16" Padding="16,8,16,32">
+
+                <!-- Cartão do perfil -->
+                <Border StrokeThickness="0" Padding="20" StrokeShape="RoundRectangle 20">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#4F46E5" Offset="0.0" />
+                            <GradientStop Color="#7C3AED" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                        <Border WidthRequest="64" HeightRequest="64" StrokeShape="RoundRectangle 32"
+                                BackgroundColor="#33FFFFFF" Stroke="#4DFFFFFF" StrokeThickness="2">
+                            <Label Text="{Binding Initials}" FontSize="24" FontAttributes="Bold"
+                                   TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding DisplayName}" FontSize="20" FontAttributes="Bold" TextColor="White" />
+                            <Label Text="{Binding Email}" FontSize="14" TextColor="#E0D9FF" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <!-- Tema -->
+                <Border Padding="16" BackgroundColor="#1E1C3A" Stroke="#337C5DF7" StrokeThickness="1"
+                        StrokeShape="RoundRectangle 16">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ToggleThemeCommand}" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                        <Border WidthRequest="48" HeightRequest="48" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 14" BackgroundColor="#332D2A57">
+                            <Label Text="{Binding ThemeEmoji}" FontSize="22"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding ThemeTitle}" FontSize="16" FontAttributes="Bold" TextColor="White" />
+                            <Label Text="{Binding ThemeSubtitle}" FontSize="14" TextColor="#8A85B8" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <!-- Trocar senha -->
+                <Border Padding="16" BackgroundColor="#1E1C3A" Stroke="#337C5DF7" StrokeThickness="1"
+                        StrokeShape="RoundRectangle 16">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ChangePasswordCommand}" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                        <Border WidthRequest="48" HeightRequest="48" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 14" BackgroundColor="#337C5DF7">
+                            <Image WidthRequest="24" HeightRequest="24" HorizontalOptions="Center" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xe897;" FontFamily="MaterialIcons" Color="#C4B8FF" Size="24" />
+                                </Image.Source>
+                            </Image>
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="Trocar senha" FontSize="16" FontAttributes="Bold" TextColor="White" />
+                            <Label Text="Atualize sua senha" FontSize="14" TextColor="#8A85B8" />
+                        </VerticalStackLayout>
+                        <Label Grid.Column="2" Text="&#x276F;" FontSize="16" TextColor="#5A5490"
+                               VerticalOptions="Center" />
+                    </Grid>
+                </Border>
+
+                <!-- Logout -->
+                <Border Padding="16" BackgroundColor="#1E1C3A" Stroke="#33EF4444" StrokeThickness="1"
+                        StrokeShape="RoundRectangle 16">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding LogoutCommand}" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                        <Border WidthRequest="48" HeightRequest="48" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 14" BackgroundColor="#33EF4444">
+                            <Image WidthRequest="24" HeightRequest="24" HorizontalOptions="Center" VerticalOptions="Center">
+                                <Image.Source>
+                                    <FontImageSource Glyph="&#xe879;" FontFamily="MaterialIcons" Color="#EF4444" Size="24" />
+                                </Image.Source>
+                            </Image>
+                        </Border>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="Sair" FontSize="16" FontAttributes="Bold" TextColor="#EF4444" />
+                            <Label Text="Até breve!" FontSize="14" TextColor="#8A85B8" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>
