@@ -22,6 +22,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("results", typeof(ResultsPage));
         Routing.RegisterRoute("final-exercises", typeof(FinalExercisesPage));
         Routing.RegisterRoute("change-password", typeof(ChangePasswordPage));
+        Routing.RegisterRoute("settings", typeof(SettingsPage));
 
         Navigated += OnShellNavigated;
     }

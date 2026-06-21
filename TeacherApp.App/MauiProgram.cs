@@ -41,8 +41,9 @@ public static class MauiProgram
         // Para API local: emulador Android "http://10.0.2.2:5092", Windows "http://localhost:5092".
         var apiBaseUrl =
 #if DEBUG
-             //ApiEndpoints.VpsApi;
-             "http://192.168.0.131:5092";
+             ApiEndpoints.VpsApi;
+             //"http://192.168.0.131:5092";
+             //"http://10.0.2.2:5092";
 #else
             ApiEndpoints.VpsRelease;
 #endif
@@ -76,6 +77,7 @@ public static class MauiProgram
         builder.Services.AddTransient<FinalExercisesViewModel>();
         builder.Services.AddTransient<ResultsViewModel>();
         builder.Services.AddTransient<TeacherApp.App.Features.Profile.ViewModels.ChangePasswordViewModel>();
+        builder.Services.AddTransient<TeacherApp.App.Features.Profile.ViewModels.SettingsViewModel>();
 
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<HomePage>();
@@ -87,6 +89,7 @@ public static class MauiProgram
         builder.Services.AddTransient<FinalExercisesPage>();
         builder.Services.AddTransient<ResultsPage>();
         builder.Services.AddTransient<TeacherApp.App.Features.Profile.Views.ChangePasswordPage>();
+        builder.Services.AddTransient<TeacherApp.App.Features.Profile.Views.SettingsPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();

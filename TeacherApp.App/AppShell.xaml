@@ -16,13 +16,6 @@
         Shell.NavBarIsVisible="False" />
 
     <TabBar Route="main">
-        <Tab Title="Home" Icon="tab_home.png">
-            <ShellContent
-                Title="Home"
-                ContentTemplate="{DataTemplate home:HomePage}"
-                Route="home"
-                Shell.NavBarIsVisible="False" />
-        </Tab>
         <Tab Title="Lessons" Icon="tab_lessons.png">
             <ShellContent
                 Title="Lessons"

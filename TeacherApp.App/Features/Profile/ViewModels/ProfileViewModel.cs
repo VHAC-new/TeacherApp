@@ -1,79 +1,130 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Maui.Graphics;
 using TeacherApp.App.Core;
-using TeacherApp.App.Core.Services;
-using TeacherApp.App.Features.Login.Services;
+using TeacherApp.App.Features.Home.Services;
+using TeacherApp.App.Features.Profile.Models;
 
 namespace TeacherApp.App.Features.Profile.ViewModels;
 
-public partial class ProfileViewModel(
-    AuthService auth,
-    TokenStore tokenStore,
-    AppThemeService themeService) : ObservableObject, ICleanup
+public partial class ProfileViewModel(ProgressService progress) : ObservableObject, ICleanup
 {
-    [ObservableProperty]
-    private string _displayName = "Student";
+    private static readonly Color[] WorldColors =
+    [
+        Color.FromArgb("#7c5df7"),
+        Color.FromArgb("#0ea5e9"),
+        Color.FromArgb("#10b981"),
+        Color.FromArgb("#f59e0b"),
+    ];
+
+    private CancellationTokenSource? _cts;
+    private bool _hasLoaded;
 
     [ObservableProperty]
-    private string _email = "";
+    private bool _isRefreshing;
 
     [ObservableProperty]
-    private string _themeTitle = "";
+    private string? _error;
 
     [ObservableProperty]
-    private string _themeSubtitle = "";
+    private string _lessonsSummary = "";
 
-    [ObservableProperty]
-    private string _themeEmoji = "";
+    // Placeholders (a API ainda não fornece XP/streak — ver memória do projeto).
+    public int Xp => 340;
+    public int Streak => 7;
+
+    public ObservableCollection<WeekDayProgress> Weekly { get; } =
+    [
+        new() { Label = "S" },
+        new() { Label = "T" },
+        new() { Label = "Q" },
+        new() { Label = "Q" },
+        new() { Label = "S" },
+        new() { Label = "S", Studied = true },
+        new() { Label = "D" },
+    ];
+
+    public ObservableCollection<WorldProgress> Worlds { get; } = [];
 
     [RelayCommand]
-    private void Load()
+    private Task LoadAsync() => LoadInternalAsync(forceRefresh: false);
+
+    [RelayCommand]
+    private Task RefreshAsync() => LoadInternalAsync(forceRefresh: true);
+
+    private async Task LoadInternalAsync(bool forceRefresh)
     {
-        Email = tokenStore.Email ?? "";
-        DisplayName = BuildDisplayName(tokenStore.Email);
-        RefreshThemeLabels();
+        if (!forceRefresh && _hasLoaded && Worlds.Count > 0)
+        {
+            IsRefreshing = false;
+            return;
+        }
+
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        var ct = _cts.Token;
+
+        Error = null;
+
+        try
+        {
+            var overall = await progress.GetOverallAsync(ct);
+            if (ct.IsCancellationRequested) return;
+
+            Worlds.Clear();
+            int idx = 0;
+            int totalCompleted = 0;
+            int total = 0;
+
+            foreach (var m in overall.Modules)
+            {
+                Worlds.Add(new WorldProgress
+                {
+                    Title = m.ModuleTitle,
+                    Completed = m.CompletedLessons,
+                    Total = m.TotalLessons,
+                    Accent = WorldColors[idx % WorldColors.Length],
+                });
+
+                totalCompleted += m.CompletedLessons;
+                total += m.TotalLessons;
+                idx++;
+            }
+
+            LessonsSummary = $"{totalCompleted} de {total} lições concluídas";
+            _hasLoaded = true;
+        }
+        catch (OperationCanceledException)
+        {
+            // Tela saiu ou carregamento substituído.
+        }
+        catch (HttpRequestException)
+        {
+            Error = "Não foi possível conectar ao servidor.";
+        }
+        catch (InvalidOperationException)
+        {
+            Error = "Resposta inesperada do servidor.";
+        }
+        finally
+        {
+            IsRefreshing = false;
+        }
     }
 
     [RelayCommand]
-    private void ToggleTheme()
+    private async Task OpenSettings()
     {
-        themeService.Toggle();
-        RefreshThemeLabels();
-    }
-
-    private void RefreshThemeLabels()
-    {
-        ThemeTitle = themeService.ToggleTitle;
-        ThemeSubtitle = themeService.ToggleSubtitle;
-        ThemeEmoji = themeService.ToggleEmoji;
-    }
-
-    [RelayCommand]
-    private async Task ChangePasswordAsync()
-    {
-        await Shell.Current.GoToAsync("change-password");
-    }
-
-    [RelayCommand]
-    private async Task LogoutAsync()
-    {
-        auth.Logout();
-        await Shell.Current.GoToAsync("//login");
-    }
-
-    private static string BuildDisplayName(string? email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-            return "Student";
-
-        var local = email.Split('@')[0];
-        if (string.IsNullOrWhiteSpace(local))
-            return "Student";
-
-        return char.ToUpperInvariant(local[0]) + local[1..];
+        await Shell.Current.GoToAsync("settings");
     }
 
     public void Cleanup()
     {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
+        IsRefreshing = false;
     }
 }

@@ -2,137 +2,161 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:TeacherApp.App.Features.Profile.ViewModels"
+             xmlns:models="clr-namespace:TeacherApp.App.Features.Profile.Models"
              x:Class="TeacherApp.App.Features.Profile.Views.ProfilePage"
              x:DataType="vm:ProfileViewModel"
-             Title="Profile">
+             Title="Profile"
+             BackgroundColor="#0E0D24">
 
-    <ScrollView BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
-        <VerticalStackLayout Spacing="0">
+    <ContentPage.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="0.3,1">
+            <GradientStop Color="#16133A" Offset="0.0" />
+            <GradientStop Color="#12112A" Offset="0.5" />
+            <GradientStop Color="#0E0D24" Offset="1.0" />
+        </LinearGradientBrush>
+    </ContentPage.Background>
 
-            <!-- Header gradiente -->
-            <Border StrokeThickness="0" Padding="24,48,24,32"
-                    StrokeShape="RoundRectangle 0,0,28,28">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="{StaticResource Primary}" Offset="0.0" />
-                        <GradientStop Color="{StaticResource Tertiary}" Offset="1.0" />
-                    </LinearGradientBrush>
-                </Border.Background>
-                <VerticalStackLayout Spacing="4">
-                    <Label Text="My Profile" FontSize="30" FontAttributes="Bold" TextColor="White" />
-                    <Label Text="Track your progress" FontSize="16" TextColor="#E6FFFFFF" />
-                </VerticalStackLayout>
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Cabeçalho: título + engrenagem -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Padding="20,18,16,8">
+            <Label Text="Perfil" FontSize="22" FontAttributes="Bold" TextColor="White"
+                   VerticalOptions="Center" />
+            <Border Grid.Column="1" WidthRequest="40" HeightRequest="40"
+                    BackgroundColor="#1E1C3A" Stroke="#337C5DF7" StrokeThickness="1"
+                    StrokeShape="RoundRectangle 12" VerticalOptions="Center">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding OpenSettingsCommand}" />
+                </Border.GestureRecognizers>
+                <Image WidthRequest="22" HeightRequest="22" HorizontalOptions="Center" VerticalOptions="Center">
+                    <Image.Source>
+                        <FontImageSource Glyph="&#xe8b8;" FontFamily="MaterialIcons" Color="#C4B8FF" Size="22" />
+                    </Image.Source>
+                </Image>
             </Border>
+        </Grid>
 
-            <VerticalStackLayout Spacing="16" Padding="16,16,16,32">
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
+            <ScrollView>
+                <VerticalStackLayout Spacing="16" Padding="16,8,16,32">
 
-                <!-- Cartão do perfil -->
-                <Border StrokeThickness="0" Padding="20"
-                        StrokeShape="RoundRectangle 24">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="{StaticResource Primary}" Offset="0.0" />
-                            <GradientStop Color="{StaticResource Tertiary}" Offset="1.0" />
-                        </LinearGradientBrush>
-                    </Border.Background>
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
-                        <Border WidthRequest="72" HeightRequest="72"
-                                StrokeShape="RoundRectangle 36"
-                                BackgroundColor="#33FFFFFF" Stroke="#4DFFFFFF" StrokeThickness="3">
-                            <Image WidthRequest="36" HeightRequest="36"
-                                   HorizontalOptions="Center" VerticalOptions="Center">
-                                <Image.Source>
-                                    <FontImageSource Glyph="&#xe7fd;"
-                                                     FontFamily="MaterialIcons"
-                                                     Color="White" Size="36" />
-                                </Image.Source>
-                            </Image>
+                    <Label Text="{Binding Error}" TextColor="#F87171" FontSize="14"
+                           HorizontalOptions="Center"
+                           IsVisible="{Binding Error, Converter={StaticResource IsNotNullConverter}}" />
+
+                    <!-- Stats: streak + XP -->
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <Border Grid.Column="0" Padding="16" BackgroundColor="#1E1C3A"
+                                Stroke="#337C5DF7" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+                            <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
+                                <Label Text="⚡" FontSize="22" HorizontalOptions="Center" />
+                                <Label Text="{Binding Streak}" FontSize="26" FontAttributes="Bold"
+                                       TextColor="White" HorizontalOptions="Center" />
+                                <Label Text="dias de sequência" FontSize="12" TextColor="#8A85B8"
+                                       HorizontalTextAlignment="Center" HorizontalOptions="Center" />
+                            </VerticalStackLayout>
                         </Border>
-                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                            <Label Text="{Binding DisplayName}" FontSize="22" FontAttributes="Bold" TextColor="White" />
-                            <Label Text="{Binding Email}" FontSize="14" TextColor="#CCFFFFFF" />
-                        </VerticalStackLayout>
-                    </Grid>
-                </Border>
-
-                <!-- Tema -->
-                <Border Padding="16"
-                        StrokeShape="RoundRectangle 16"
-                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}" StrokeThickness="1"
-                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource CardBackgroundDark}}">
-                    <Border.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding ToggleThemeCommand}" />
-                    </Border.GestureRecognizers>
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
-                        <Border WidthRequest="48" HeightRequest="48"
-                                StrokeShape="RoundRectangle 14" StrokeThickness="0"
-                                BackgroundColor="{StaticResource Secondary}">
-                            <Label Text="{Binding ThemeEmoji}" FontSize="22" HorizontalOptions="Center" VerticalOptions="Center" />
+                        <Border Grid.Column="1" Padding="16" BackgroundColor="#1E1C3A"
+                                Stroke="#337C5DF7" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+                            <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
+                                <Label Text="⭐" FontSize="22" HorizontalOptions="Center" />
+                                <Label Text="{Binding Xp}" FontSize="26" FontAttributes="Bold"
+                                       TextColor="White" HorizontalOptions="Center" />
+                                <Label Text="XP total" FontSize="12" TextColor="#8A85B8"
+                                       HorizontalTextAlignment="Center" HorizontalOptions="Center" />
+                            </VerticalStackLayout>
                         </Border>
-                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                            <Label Text="{Binding ThemeTitle}" FontSize="16" FontAttributes="Bold" />
-                            <Label Text="{Binding ThemeSubtitle}" FontSize="14" TextColor="{StaticResource Gray500}" />
-                        </VerticalStackLayout>
                     </Grid>
-                </Border>
 
-                <!-- Change password -->
-                <Border Padding="16"
-                        StrokeShape="RoundRectangle 16"
-                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}" StrokeThickness="1"
-                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource CardBackgroundDark}}">
-                    <Border.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding ChangePasswordCommand}" />
-                    </Border.GestureRecognizers>
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
-                        <Border WidthRequest="48" HeightRequest="48"
-                                StrokeShape="RoundRectangle 14" StrokeThickness="0"
-                                BackgroundColor="#1A4F7CFF">
-                            <Image WidthRequest="24" HeightRequest="24"
-                                   HorizontalOptions="Center" VerticalOptions="Center">
-                                <Image.Source>
-                                    <FontImageSource Glyph="&#xe897;"
-                                                     FontFamily="MaterialIcons"
-                                                     Color="{StaticResource Primary}" Size="24" />
-                                </Image.Source>
-                            </Image>
-                        </Border>
-                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                            <Label Text="Change Password" FontSize="16" FontAttributes="Bold"
-                                   TextColor="{AppThemeBinding Light={StaticResource Foreground}, Dark={StaticResource ForegroundDark}}" />
-                            <Label Text="Update your password" FontSize="14" TextColor="{StaticResource MutedForeground}" />
+                    <!-- Sequência semanal -->
+                    <Border Padding="16" BackgroundColor="#1E1C3A"
+                            Stroke="#337C5DF7" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+                        <VerticalStackLayout Spacing="14">
+                            <HorizontalStackLayout Spacing="8">
+                                <Label Text="🔥" FontSize="15" />
+                                <Label Text="Sequência desta semana" FontSize="14" FontAttributes="Bold"
+                                       TextColor="White" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                            <FlexLayout BindableLayout.ItemsSource="{Binding Weekly}"
+                                        JustifyContent="SpaceBetween" Wrap="NoWrap">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:WeekDayProgress">
+                                        <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
+                                            <Border WidthRequest="36" HeightRequest="36"
+                                                    BackgroundColor="{Binding CircleColor}"
+                                                    Stroke="{Binding StrokeColor}" StrokeThickness="2"
+                                                    StrokeShape="RoundRectangle 18">
+                                                <Label Text="✓" FontSize="16" FontAttributes="Bold"
+                                                       TextColor="White"
+                                                       HorizontalOptions="Center" VerticalOptions="Center"
+                                                       IsVisible="{Binding Studied}" />
+                                            </Border>
+                                            <Label Text="{Binding Label}" FontSize="12" FontAttributes="Bold"
+                                                   TextColor="{Binding LabelColor}" HorizontalOptions="Center" />
+                                        </VerticalStackLayout>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </FlexLayout>
                         </VerticalStackLayout>
-                    </Grid>
-                </Border>
+                    </Border>
 
-                <Border Padding="16"
-                        StrokeShape="RoundRectangle 16"
-                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}" StrokeThickness="1"
-                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource CardBackgroundDark}}">
-                    <Border.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding LogoutCommand}" />
-                    </Border.GestureRecognizers>
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
-                        <Border WidthRequest="48" HeightRequest="48"
-                                StrokeShape="RoundRectangle 14" StrokeThickness="0"
-                                BackgroundColor="#1AEF4444">
-                            <Image WidthRequest="24" HeightRequest="24"
-                                   HorizontalOptions="Center" VerticalOptions="Center">
-                                <Image.Source>
-                                    <FontImageSource Glyph="&#xe879;"
-                                                     FontFamily="MaterialIcons"
-                                                     Color="#EF4444" Size="24" />
-                                </Image.Source>
-                            </Image>
-                        </Border>
-                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                            <Label Text="Sign Out" FontSize="16" FontAttributes="Bold" TextColor="#EF4444" />
-                            <Label Text="Come back soon!" FontSize="14" TextColor="{StaticResource Gray500}" />
-                        </VerticalStackLayout>
-                    </Grid>
-                </Border>
+                    <!-- Progresso por mundo -->
+                    <Label Text="PROGRESSO POR MUNDO" FontSize="12" FontAttributes="Bold"
+                           TextColor="#5A5490" CharacterSpacing="1.5" Margin="4,4,0,0" />
 
-            </VerticalStackLayout>
-        </VerticalStackLayout>
-    </ScrollView>
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Worlds}" Spacing="12">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="models:WorldProgress">
+                                <Border Padding="16" BackgroundColor="#1E1C3A"
+                                        Stroke="#337C5DF7" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+                                    <VerticalStackLayout Spacing="8">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <HorizontalStackLayout Spacing="8">
+                                                <Border WidthRequest="12" HeightRequest="12"
+                                                        BackgroundColor="{Binding Accent}" StrokeThickness="0"
+                                                        StrokeShape="RoundRectangle 6" VerticalOptions="Center" />
+                                                <Label Text="{Binding Title}" FontSize="14" FontAttributes="Bold"
+                                                       TextColor="White" VerticalOptions="Center" />
+                                            </HorizontalStackLayout>
+                                            <Label Grid.Column="1" Text="{Binding CountText}" FontSize="12"
+                                                   TextColor="#8A85B8" VerticalOptions="Center" />
+                                        </Grid>
+                                        <!-- Barra de progresso -->
+                                        <Grid HeightRequest="8">
+                                            <Border BackgroundColor="#2A2650" StrokeThickness="0"
+                                                    StrokeShape="RoundRectangle 4" />
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="{Binding FillStar}" />
+                                                    <ColumnDefinition Width="{Binding RestStar}" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" BackgroundColor="{Binding Accent}"
+                                                        StrokeThickness="0" StrokeShape="RoundRectangle 4" />
+                                            </Grid>
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                        <BindableLayout.EmptyView>
+                            <Label Text="Nenhum módulo disponível." TextColor="#5A5490"
+                                   HorizontalOptions="Center" Margin="0,8,0,0" />
+                        </BindableLayout.EmptyView>
+                    </VerticalStackLayout>
+
+                    <!-- Resumo de lições -->
+                    <Border Padding="16" BackgroundColor="#1E1C3A"
+                            Stroke="#337C5DF7" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                            <Label Text="📖" FontSize="18" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding LessonsSummary}" FontSize="14"
+                                   FontAttributes="Bold" TextColor="White" VerticalOptions="Center" />
+                            <Label Grid.Column="2" Text="🏆" FontSize="18" VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
+    </Grid>
 </ContentPage>
