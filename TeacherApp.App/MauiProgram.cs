@@ -41,9 +41,9 @@ public static class MauiProgram
         // Para API local: emulador Android "http://10.0.2.2:5092", Windows "http://localhost:5092".
         var apiBaseUrl =
 #if DEBUG
-             //ApiEndpoints.VpsApi;
+             ApiEndpoints.VpsApi;
              //"http://192.168.0.131:5092";
-             "http://10.0.2.2:5092";
+             //"http://10.0.2.2:5092";
 #else
             ApiEndpoints.VpsRelease;
 #endif
