@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using System.Linq;
 using System.Windows.Input;
+using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Layouts;
@@ -25,12 +27,81 @@ public sealed class TrailView : ContentView
         set => SetValue(NodeCommandProperty, value);
     }
 
+    /// <summary>Comando que dispara o carregamento (lazy) dos nós do módulo quando ele entra na viewport.</summary>
+    public static readonly BindableProperty EnsureLoadedCommandProperty =
+        BindableProperty.Create(nameof(EnsureLoadedCommand), typeof(ICommand), typeof(TrailView));
+
+    public ICommand? EnsureLoadedCommand
+    {
+        get => (ICommand?)GetValue(EnsureLoadedCommandProperty);
+        set => SetValue(EnsureLoadedCommandProperty, value);
+    }
+
+    private TrailModule? _module;
+    private VisualElement? _floatTarget;
+
     protected override void OnBindingContextChanged()
     {
         base.OnBindingContextChanged();
-        Content = BindingContext is TrailModule module
-            ? (module.IsLocked ? BuildLockedCard(module) : BuildActive(module))
-            : null;
+
+        if (_module is not null)
+            _module.PropertyChanged -= OnModulePropertyChanged;
+
+        _module = BindingContext as TrailModule;
+
+        if (_module is not null)
+            _module.PropertyChanged += OnModulePropertyChanged;
+
+        Rebuild();
+        TriggerLoadIfNeeded();
+    }
+
+    private void OnModulePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        // LoadState/IsLocked sempre reconstroem (placeholder ↔ trilha ↔ bloqueado).
+        bool structural = e.PropertyName is nameof(TrailModule.LoadState) or nameof(TrailModule.IsLocked);
+        // Nodes/CompletedCount só importam quando já estamos exibindo a trilha (Loaded) — ex.: update
+        // otimista. Durante o load o placeholder ignora esses campos, então evitamos rebuilds à toa.
+        bool contentWhileLoaded =
+            e.PropertyName is nameof(TrailModule.Nodes) or nameof(TrailModule.CompletedCount)
+            && _module?.LoadState == TrailModuleLoadState.Loaded;
+
+        if (!structural && !contentWhileLoaded)
+            return;
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            Rebuild();
+            TriggerLoadIfNeeded();
+        });
+    }
+
+    private void TriggerLoadIfNeeded()
+    {
+        if (_module is { IsLocked: false, LoadState: TrailModuleLoadState.NotLoaded } m
+            && EnsureLoadedCommand?.CanExecute(m) == true)
+        {
+            EnsureLoadedCommand.Execute(m);
+        }
+    }
+
+    private void Rebuild()
+    {
+        // Para qualquer animação do conteúdo anterior antes de descartá-lo (a reciclagem do
+        // CollectionView pode não disparar Unloaded de forma confiável no iOS).
+        AbortFloat();
+
+        Content = _module is null
+            ? null
+            : _module.LoadState == TrailModuleLoadState.Loaded
+                ? BuildActive(_module)
+                : BuildLoadingPlaceholder(_module);
+    }
+
+    private void AbortFloat()
+    {
+        _floatTarget?.AbortAnimation("nodeFloat");
+        _floatTarget = null;
     }
 
     // ─── Layout helpers ──────────────────────────────────────────────────────
@@ -61,48 +132,6 @@ public sealed class TrailView : ContentView
         target.Animate("nodeFloat", anim, length: 2400, repeat: () => true);
     }
 
-    // ─── Locked module card ──────────────────────────────────────────────────
-
-    private static View BuildLockedCard(TrailModule m)
-    {
-        var grid = new Grid
-        {
-            ColumnDefinitions =
-            {
-                new ColumnDefinition(GridLength.Auto),
-                new ColumnDefinition(GridLength.Star),
-            },
-            ColumnSpacing = 12,
-            VerticalOptions = LayoutOptions.Center,
-        };
-
-        var lockLabel = new Label
-        {
-            Text = "🔒",
-            FontSize = 18,
-            VerticalOptions = LayoutOptions.Center,
-        };
-        grid.Add(lockLabel, 0, 0);
-
-        var texts = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
-        texts.Add(new Label { Text = m.Title, FontSize = 14, FontAttributes = FontAttributes.Bold, TextColor = Colors.White });
-        if (!string.IsNullOrWhiteSpace(m.Subtitle))
-            texts.Add(new Label { Text = m.Subtitle, FontSize = 12, TextColor = C("#5a5490") });
-        grid.Add(texts, 1, 0);
-
-        return new Border
-        {
-            Margin = new Thickness(16, 8),
-            Padding = 16,
-            Opacity = 0.55,
-            BackgroundColor = C("#1e1c3a"),
-            Stroke = C("#3d3870"),
-            StrokeThickness = 1,
-            StrokeShape = new RoundRectangle { CornerRadius = 18 },
-            Content = grid,
-        };
-    }
-
     // ─── Active module ───────────────────────────────────────────────────────
 
     private View BuildActive(TrailModule m)
@@ -110,6 +139,28 @@ public sealed class TrailView : ContentView
         var stack = new VerticalStackLayout { Spacing = 0 };
         stack.Add(BuildHeaderCard(m));
         stack.Add(BuildTrailArea(m));
+        return stack;
+    }
+
+    /// <summary>Cabeçalho (dados já disponíveis) + área da trilha reservada (altura conhecida) com um spinner sutil,
+    /// enquanto os nós são carregados sob demanda. Evita salto de layout quando os nós chegam.</summary>
+    private static View BuildLoadingPlaceholder(TrailModule m)
+    {
+        var stack = new VerticalStackLayout { Spacing = 0 };
+        stack.Add(BuildHeaderCard(m));
+
+        var area = new Grid { HeightRequest = m.TrailHeight };
+        area.Add(new ActivityIndicator
+        {
+            IsRunning = true,
+            Color = C(m.AccentColor),
+            WidthRequest = 32,
+            HeightRequest = 32,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Start,
+            Margin = new Thickness(0, 48, 0, 0),
+        });
+        stack.Add(area);
         return stack;
     }
 
@@ -185,11 +236,11 @@ public sealed class TrailView : ContentView
         row1.Add(titleStack, 1, 0);
         row1.Add(countLabel, 2, 0);
 
-        // Linha 2: destaque "TRILHA ATIVA" + percentual
+        // Linha 2: "TRILHA ATIVA" + percentual (ou "BLOQUEADO" + cadeado quando bloqueado)
         var activeTexts = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
         activeTexts.Add(new Label
         {
-            Text = "TRILHA ATIVA",
+            Text = m.IsLocked ? "BLOQUEADO" : "TRILHA ATIVA",
             FontSize = 10,
             FontAttributes = FontAttributes.Bold,
             TextColor = C("#c4b5fd"),
@@ -197,25 +248,25 @@ public sealed class TrailView : ContentView
         });
         activeTexts.Add(new Label
         {
-            Text = m.ActiveTrailTitle,
+            Text = m.IsLocked ? "Conclua o módulo anterior" : m.ActiveTrailTitle,
             FontSize = 14,
             FontAttributes = FontAttributes.Bold,
             TextColor = Colors.White,
         });
-        if (!string.IsNullOrWhiteSpace(m.Subtitle))
+        if (!m.IsLocked && !string.IsNullOrWhiteSpace(m.Subtitle))
             activeTexts.Add(new Label { Text = m.Subtitle, FontSize = 12, TextColor = C("#c4b8ff") });
 
         var percentCircle = new Border
         {
             WidthRequest = 38,
             HeightRequest = 38,
-            BackgroundColor = accent,
+            BackgroundColor = m.IsLocked ? C("#2a2650") : accent,
             StrokeThickness = 0,
             StrokeShape = new RoundRectangle { CornerRadius = 19 },
             VerticalOptions = LayoutOptions.Center,
             Content = new Label
             {
-                Text = m.ProgressPercentText,
+                Text = m.IsLocked ? "🔒" : m.ProgressPercentText,
                 FontSize = 11,
                 FontAttributes = FontAttributes.Bold,
                 TextColor = Colors.White,
@@ -453,10 +504,17 @@ public sealed class TrailView : ContentView
         container.Add(nodeGroup);
 
         // Flutuação contínua do nó atual (igual ao kernel-ai/Figma).
+        // Loaded/Unloaded pausam a animação quando o item entra/sai da tela (virtualização).
         if (node.IsCurrent)
         {
+            _floatTarget = nodeGroup;
             nodeGroup.Loaded += (_, _) => StartFloat(nodeGroup);
-            nodeGroup.Unloaded += (_, _) => nodeGroup.AbortAnimation("nodeFloat");
+            nodeGroup.Unloaded += (_, _) =>
+            {
+                nodeGroup.AbortAnimation("nodeFloat");
+                if (ReferenceEquals(_floatTarget, nodeGroup))
+                    _floatTarget = null;
+            };
         }
 
         // Rótulo abaixo (apenas para nós não bloqueados, como no Figma).

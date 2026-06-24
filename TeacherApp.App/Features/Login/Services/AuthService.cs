@@ -28,6 +28,14 @@ public sealed class AuthService(HttpClient http, TokenStore tokenStore)
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task ForgotPasswordAsync(string email, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync(
+            "api/v1/auth/forgot-password",
+            new ForgotPasswordRequest(email), ct);
+        response.EnsureSuccessStatusCode();
+    }
+
     public void Logout() => tokenStore.Clear();
     public bool IsAuthenticated => tokenStore.IsAuthenticated;
 }

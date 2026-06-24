@@ -35,6 +35,18 @@
                       DebounceInterval="250"
                       FullWidth="true" />
     </div>
+    <div style="flex:0 0 12rem;">
+        <MudSelect T="StatusFilter"
+                   @bind-Value="_statusFilter"
+                   Label="Status"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense"
+                   FullWidth="true">
+            <MudSelectItem Value="StatusFilter.Active">Ativos</MudSelectItem>
+            <MudSelectItem Value="StatusFilter.Inactive">Inativos</MudSelectItem>
+            <MudSelectItem Value="StatusFilter.All">Todos</MudSelectItem>
+        </MudSelect>
+    </div>
 </div>
 
 @if (_loading)
@@ -54,6 +66,7 @@ else
                   Elevation="0" Class="rounded-xl">
             <HeaderContent>
                 <MudTh>Student Name</MudTh>
+                <MudTh>Status</MudTh>
                 <MudTh>Progress</MudTh>
                 <MudTh>Accuracy</MudTh>
                 <MudTh>Total Answers</MudTh>
@@ -73,6 +86,14 @@ else
                             </MudText>
                         </div>
                     </div>
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Text"
+                             Color="@(context.IsActive ? Color.Success : Color.Default)">
+                        @(context.IsActive ? "Ativo" : "Acesso desabilitado")
+                    </MudChip>
                 </MudTd>
                 <MudTd DataLabel="Progress">
                     <div class="d-flex align-center gap-2" style="min-width:120px;">
@@ -118,13 +139,22 @@ else
 }
 
 @code {
+    private enum StatusFilter { Active, Inactive, All }
+
     private List<AdminStudentPerformanceResponse> _students = [];
     private bool _loading = true;
     private string? _error;
     private string? _searchTerm;
+    private StatusFilter _statusFilter = StatusFilter.Active;
 
     private List<AdminStudentPerformanceResponse> FilteredStudents =>
         _students
+            .Where(s => _statusFilter switch
+            {
+                StatusFilter.Active => s.IsActive,
+                StatusFilter.Inactive => !s.IsActive,
+                _ => true
+            })
             .Where(s => string.IsNullOrWhiteSpace(_searchTerm)
                 || StudentDisplay.GetDisplayName(s.FullName, s.Email)
                     .Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)

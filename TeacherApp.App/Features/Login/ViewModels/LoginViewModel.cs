@@ -9,6 +9,8 @@ namespace TeacherApp.App.Features.Login.ViewModels;
 public partial class LoginViewModel(AuthService authService) : ObservableObject
 {
     private const string RecentEmailsKey = "recent_login_emails";
+    private const string RememberEmailKey = "remember_email_enabled";
+    private const string RememberedEmailKey = "remembered_email";
     private const int MaxRecentEmails = 5;
 
     private CancellationTokenSource? _cts;
@@ -24,9 +26,29 @@ public partial class LoginViewModel(AuthService authService) : ObservableObject
     private string? _error;
 
     [ObservableProperty]
+    private string? _info;
+
+    [ObservableProperty]
     private bool _isBusy;
 
+    [ObservableProperty]
+    private bool _rememberEmail;
+
     public ObservableCollection<string> FilteredRecentEmails { get; } = [];
+
+    partial void OnRememberEmailChanged(bool value)
+    {
+        try
+        {
+            Preferences.Set(RememberEmailKey, value);
+            if (!value)
+                Preferences.Remove(RememberedEmailKey);
+        }
+        catch
+        {
+            // ignore storage failures
+        }
+    }
 
     public void LoadRecentEmails()
     {
@@ -38,6 +60,14 @@ public partial class LoginViewModel(AuthService authService) : ObservableObject
         catch
         {
             _allRecentEmails = [];
+        }
+
+        RememberEmail = Preferences.Get(RememberEmailKey, false);
+        if (RememberEmail)
+        {
+            var saved = Preferences.Get(RememberedEmailKey, "");
+            if (!string.IsNullOrWhiteSpace(saved))
+                Email = saved;
         }
     }
 
@@ -55,6 +85,9 @@ public partial class LoginViewModel(AuthService authService) : ObservableObject
         foreach (var e in matches)
             FilteredRecentEmails.Add(e);
     }
+
+    [RelayCommand]
+    private void ToggleRememberEmail() => RememberEmail = !RememberEmail;
 
     [RelayCommand]
     private void SelectRecentEmail(string email)
@@ -82,6 +115,22 @@ public partial class LoginViewModel(AuthService authService) : ObservableObject
         }
     }
 
+    private void SaveRememberPreference(string email)
+    {
+        try
+        {
+            Preferences.Set(RememberEmailKey, RememberEmail);
+            if (RememberEmail)
+                Preferences.Set(RememberedEmailKey, email.Trim());
+            else
+                Preferences.Remove(RememberedEmailKey);
+        }
+        catch
+        {
+            // ignore storage failures
+        }
+    }
+
     [RelayCommand]
     private async Task LoginAsync()
     {
@@ -98,6 +147,7 @@ public partial class LoginViewModel(AuthService authService) : ObservableObject
 
         IsBusy = true;
         Error = null;
+        Info = null;
 
         try
         {
@@ -106,6 +156,7 @@ public partial class LoginViewModel(AuthService authService) : ObservableObject
                 return;
 
             SaveRecentEmail(Email);
+            SaveRememberPreference(Email);
             await Shell.Current.GoToAsync("//lessons");
         }
         catch (OperationCanceledException)
@@ -126,6 +177,38 @@ public partial class LoginViewModel(AuthService authService) : ObservableObject
         {
             if (!ct.IsCancellationRequested)
                 IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ForgotPasswordAsync()
+    {
+        Error = null;
+        Info = null;
+
+        if (string.IsNullOrWhiteSpace(Email))
+        {
+            Error = "Informe o e-mail para recuperar a senha.";
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            await authService.ForgotPasswordAsync(Email.Trim());
+            Info = "Se o e-mail estiver cadastrado, enviamos uma nova senha. Verifique sua caixa de entrada.";
+        }
+        catch (HttpRequestException)
+        {
+            Error = "Não foi possível conectar ao servidor.";
+        }
+        catch (Exception)
+        {
+            Error = "Não foi possível enviar a nova senha. Tente novamente.";
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 }

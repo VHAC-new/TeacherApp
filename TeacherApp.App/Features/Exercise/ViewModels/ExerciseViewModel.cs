@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using TeacherApp.App.Core;
+using TeacherApp.App.Core.Messages;
 using TeacherApp.App.Core.Services;
 using TeacherApp.App.Features.Exercise.Services;
 using TeacherApp.Contracts.Exercises;
@@ -182,6 +184,14 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
             {
                 if (BeforeNavigateToResults is not null)
                     await BeforeNavigateToResults();
+
+                // Notifica a trilha (update otimista + sync). As respostas já foram submetidas
+                // por exercício, então o servidor já reflete os acertos neste ponto.
+                if (Guid.TryParse(ModuleId, out var modId) && Guid.TryParse(LessonId, out var lesId))
+                {
+                    WeakReferenceMessenger.Default.Send(
+                        new ProgressChangedMessage(modId, lesId, CorrectCount == TotalExercises));
+                }
 
                 var moduleTitle = Uri.EscapeDataString(ModuleTitle);
                 await Shell.Current.GoToAsync(
