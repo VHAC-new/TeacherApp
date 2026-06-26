@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using TeacherApp.App.Core;
+using TeacherApp.App.Core.Messages;
 using TeacherApp.App.Core.Services;
 using TeacherApp.App.Features.Exercise.Services;
 using TeacherApp.Contracts.Exercises;
@@ -9,6 +11,7 @@ using TeacherApp.Contracts.Exercises;
 namespace TeacherApp.App.Features.Exercise.ViewModels;
 
 [QueryProperty(nameof(ModuleId), "moduleId")]
+[QueryProperty(nameof(TrailId), "trailId")]
 [QueryProperty(nameof(LessonId), "lessonId")]
 [QueryProperty(nameof(ModuleTitle), "moduleTitle")]
 public partial class ExerciseViewModel(CatalogService catalog, ExerciseService exerciseService) : ObservableObject, ICleanup
@@ -18,6 +21,9 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
 
     [ObservableProperty]
     private string _moduleId = "";
+
+    [ObservableProperty]
+    private string _trailId = "";
 
     [ObservableProperty]
     private string _lessonId = "";
@@ -55,7 +61,7 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
     [ObservableProperty]
     private bool _isHintVisible;
 
-    public string HintToggleLabel => IsHintVisible ? "Hide hint" : "Show hint";
+    public string HintToggleLabel => IsHintVisible ? "Esconder dica" : "Mostrar dica";
 
     public string HintChevronGlyph => IsHintVisible ? "\ue5ce" : "\ue5cf";
 
@@ -71,10 +77,10 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
     [RelayCommand]
     private async Task LoadAsync()
     {
-        if (!Guid.TryParse(ModuleId, out var modId) || !Guid.TryParse(LessonId, out var lesId))
+        if (!Guid.TryParse(TrailId, out var trlId) || !Guid.TryParse(LessonId, out var lesId))
             return;
 
-        var key = $"{ModuleId}:{LessonId}";
+        var key = $"{TrailId}:{LessonId}";
         if (Exercises.Count > 0 && _loadedKey == key)
             return;
 
@@ -88,7 +94,7 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
 
         try
         {
-            var exercises = await catalog.GetExercisesAsync(modId, lesId, ct);
+            var exercises = await catalog.GetExercisesAsync(trlId, lesId, ct);
             if (ct.IsCancellationRequested) return;
 
             Exercises.Clear();
@@ -126,7 +132,11 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
         if (IsBusy || LastResult is not null)
             return;
 
-        if (string.IsNullOrWhiteSpace(Answer) || CurrentExercise is null)
+        if (CurrentExercise is null)
+            return;
+
+        // Exercício aberto (sem resposta esperada): resposta não é obrigatória.
+        if (CurrentExercise.RequiresAnswer && string.IsNullOrWhiteSpace(Answer))
         {
             Error = "Digite uma resposta.";
             return;
@@ -137,7 +147,9 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
 
         try
         {
-            var result = await exerciseService.SubmitAsync(CurrentExercise.Id, Answer);
+            // Para questão aberta sem resposta digitada, envia um marcador (o servidor sempre aceita).
+            var answerToSend = string.IsNullOrWhiteSpace(Answer) ? "—" : Answer;
+            var result = await exerciseService.SubmitAsync(CurrentExercise.Id, answerToSend);
             LastResult = result.IsCorrect;
             Explanation = result.Explanation;
             if (result.IsCorrect) CorrectCount++;
@@ -183,9 +195,18 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
                 if (BeforeNavigateToResults is not null)
                     await BeforeNavigateToResults();
 
+                // Notifica a trilha (update otimista + sync). As respostas já foram submetidas
+                // por exercício, então o servidor já reflete os acertos neste ponto.
+                if (Guid.TryParse(ModuleId, out var modId) && Guid.TryParse(TrailId, out var trlId)
+                    && Guid.TryParse(LessonId, out var lesId))
+                {
+                    WeakReferenceMessenger.Default.Send(
+                        new ProgressChangedMessage(modId, trlId, lesId, CorrectCount == TotalExercises));
+                }
+
                 var moduleTitle = Uri.EscapeDataString(ModuleTitle);
                 await Shell.Current.GoToAsync(
-                    $"results?moduleId={ModuleId}&lessonId={LessonId}&correct={CorrectCount}&total={TotalExercises}&moduleTitle={moduleTitle}");
+                    $"results?moduleId={ModuleId}&trailId={TrailId}&lessonId={LessonId}&correct={CorrectCount}&total={TotalExercises}&moduleTitle={moduleTitle}");
             }
             finally
             {
@@ -204,7 +225,7 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
     {
         Segments.Clear();
         for (int i = 0; i < TotalExercises; i++)
-            Segments.Add(new SegmentState { Color = i == 0 ? Color.FromArgb("#4F7CFF") : Color.FromArgb("#E0E0E0") });
+            Segments.Add(new SegmentState { Color = i == 0 ? Color.FromArgb("#7C5DF7") : Color.FromArgb("#2A2650") });
     }
 
     private void UpdateSegment(int index, bool? isCorrect)
@@ -216,12 +237,12 @@ public partial class ExerciseViewModel(CatalogService catalog, ExerciseService e
         else if (isCorrect == false)
             Segments[index] = new SegmentState { Color = Color.FromArgb("#F44336") };
         else
-            Segments[index] = new SegmentState { Color = Color.FromArgb("#4F7CFF") };
+            Segments[index] = new SegmentState { Color = Color.FromArgb("#7C5DF7") };
     }
 
     private void UpdateQuestionLabel()
     {
-        QuestionLabel = $"Question {CurrentIndex + 1} of {TotalExercises}";
+        QuestionLabel = $"{CurrentIndex + 1} de {TotalExercises}";
     }
 
     public void Cleanup()

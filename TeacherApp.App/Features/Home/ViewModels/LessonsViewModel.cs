@@ -2,41 +2,53 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Maui.ApplicationModel;
 using TeacherApp.App.Core;
+using TeacherApp.App.Core.Messages;
 using TeacherApp.App.Core.Services;
 using TeacherApp.App.Features.Home.Models;
 using TeacherApp.App.Features.Home.Services;
-using TeacherApp.Contracts.Lessons;
-using TeacherApp.Contracts.Progress;
 
 namespace TeacherApp.App.Features.Home.ViewModels;
 
-public partial class LessonsViewModel(CatalogService catalog, ProgressService progress) : ObservableObject, ICleanup
+public enum LessonsPageState { Loading, Ready, Error }
+
+public partial class LessonsViewModel : ObservableObject, ICleanup
 {
-    // Emojis ilustrativos por lição (a API não fornece ícone por lição).
-    private static readonly string[] LessonEmojis =
-        ["👋", "💬", "🔢", "💡", "🎨", "👨‍👩‍👧", "⭐", "🍎", "🍽️", "🚌", "🛒", "☀️", "📘", "✏️", "🔤", "🗣️"];
+    // Janela em que uma troca de aba reutiliza a memória sem rebater na API.
+    private static readonly TimeSpan TabSwitchTtl = TimeSpan.FromSeconds(45);
 
-    // Paleta por módulo (gradiente do cabeçalho + cor de destaque).
-    private static readonly (string From, string To, string Accent, string Emoji)[] Palette =
-    [
-        ("#4f46e5", "#7c3aed", "#7c5df7", "🌊"),
-        ("#0284c7", "#38bdf8", "#0ea5e9", "🏝️"),
-        ("#059669", "#34d399", "#10b981", "🏞️"),
-        ("#d97706", "#fbbf24", "#f59e0b", "🏔️"),
-    ];
-
-    private static readonly string[] Levels =
-        ["Iniciante", "Básico", "Intermediário", "Avançado"];
+    private readonly TrailRepository _repository;
+    private readonly AppSessionState _appSession;
 
     private CancellationTokenSource? _cts;
     private bool _hasLoaded;
+    private DateTimeOffset _lastSyncUtc;
+
+    public LessonsViewModel(TrailRepository repository, AppSessionState appSession)
+    {
+        _repository = repository;
+        _appSession = appSession;
+
+        // Mantém a trilha sincronizada quando uma aula é concluída em outra tela.
+        // NÃO desregistrar no Cleanup: a mensagem chega enquanto o usuário está fora desta aba.
+        WeakReferenceMessenger.Default.Register<ProgressChangedMessage>(
+            this, static (r, m) => ((LessonsViewModel)r).OnProgressChanged(m));
+    }
 
     [ObservableProperty]
-    private bool _isRefreshing;
+    [NotifyPropertyChangedFor(nameof(IsLoading))]
+    [NotifyPropertyChangedFor(nameof(IsReady))]
+    [NotifyPropertyChangedFor(nameof(IsError))]
+    private LessonsPageState _state = LessonsPageState.Loading;
 
     [ObservableProperty]
     private string? _error;
+
+    public bool IsLoading => State == LessonsPageState.Loading;
+    public bool IsReady => State == LessonsPageState.Ready;
+    public bool IsError => State == LessonsPageState.Error;
 
     // Placeholders (a API ainda não fornece XP/streak — ver docs/qa).
     public int Xp => 340;
@@ -44,60 +56,64 @@ public partial class LessonsViewModel(CatalogService catalog, ProgressService pr
 
     public ObservableCollection<TrailModule> Modules { get; } = [];
 
-    [RelayCommand]
-    private Task LoadAsync() => LoadInternalAsync(forceRefresh: false);
-
-    [RelayCommand]
-    private Task RefreshAsync() => LoadInternalAsync(forceRefresh: true);
-
-    private async Task LoadInternalAsync(bool forceRefresh)
+    private CancellationToken ResetCts()
     {
-        if (!forceRefresh && _hasLoaded && Modules.Count > 0)
-        {
-            IsRefreshing = false;
-            return;
-        }
-
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
-        var ct = _cts.Token;
+        return _cts.Token;
+    }
 
+    /// <summary>Chamado em OnAppearing. Primeira vez: carrega (fase 1 + 1º módulo). Demais: refresh silencioso.</summary>
+    [RelayCommand]
+    private async Task InitializeAsync()
+    {
+        if (_hasLoaded && Modules.Count > 0)
+        {
+            // Troca de aba: reusa a memória. Só revalida (silencioso) se o app retomou do
+            // background (resume) ou se passou o TTL desde a última sincronização.
+            bool resume = _appSession.ConsumeResyncRequest();
+            bool stale = DateTimeOffset.UtcNow - _lastSyncUtc >= TabSwitchTtl;
+            if (resume || stale)
+                await RefreshProgressAsync();
+            return;
+        }
+
+        await LoadFirstTimeAsync();
+    }
+
+    [RelayCommand]
+    private Task RetryAsync()
+    {
+        _hasLoaded = false;
+        return LoadFirstTimeAsync();
+    }
+
+    // ─── Fase 1: shells (barato) ─────────────────────────────────────────────
+    private async Task LoadFirstTimeAsync()
+    {
+        var ct = ResetCts();
+        State = LessonsPageState.Loading;
         Error = null;
 
         try
         {
-            var modules = (await catalog.GetModulesAsync(ct))
-                .OrderBy(m => m.Order)
-                .ToList();
-            if (ct.IsCancellationRequested) return;
-
-            // Carrega lições + progresso de cada módulo em paralelo.
-            var perModule = await Task.WhenAll(modules.Select(async m =>
-            {
-                var lessons = await catalog.GetLessonsAsync(m.Id, ct);
-                var lessonProgress = await progress.GetLessonProgressAsync(m.Id, ct);
-                return (Module: m, Lessons: lessons, Progress: lessonProgress);
-            }));
+            var shells = await _repository.GetModuleShellsAsync(ct);
             if (ct.IsCancellationRequested) return;
 
             Modules.Clear();
+            foreach (var shell in shells)
+                Modules.Add(shell);
 
-            // Um módulo é desbloqueado se o anterior foi 100% concluído.
-            bool previousModuleCompleted = true;
-
-            for (int mi = 0; mi < perModule.Length; mi++)
-            {
-                var (module, lessons, lessonProgress) = perModule[mi];
-                bool moduleLocked = !previousModuleCompleted;
-
-                var trail = BuildTrailModule(module, lessons, lessonProgress, mi, moduleLocked);
-                Modules.Add(trail);
-
-                previousModuleCompleted = trail.TotalCount > 0 && trail.CompletedCount == trail.TotalCount;
-            }
+            // Carrega as trilhas do primeiro módulo antes de exibir (evita módulo vazio).
+            if (Modules.Count > 0)
+                await EnsureModuleLoadedAsync(Modules[0], ct);
+            if (ct.IsCancellationRequested) return;
 
             _hasLoaded = true;
+            _lastSyncUtc = DateTimeOffset.UtcNow;
+            _appSession.ConsumeResyncRequest(); // limpa flag de launch para não revalidar logo em seguida
+            State = LessonsPageState.Ready;
         }
         catch (OperationCanceledException)
         {
@@ -106,86 +122,177 @@ public partial class LessonsViewModel(CatalogService catalog, ProgressService pr
         catch (HttpRequestException)
         {
             Error = "Não foi possível conectar ao servidor.";
-        }
-        finally
-        {
-            IsRefreshing = false;
+            State = LessonsPageState.Error;
         }
     }
 
-    private static TrailModule BuildTrailModule(
-        TeacherApp.Contracts.Modules.ModuleResponse module,
-        List<LessonResponse> lessons,
-        List<LessonProgressResponse> lessonProgress,
-        int moduleIndex,
-        bool moduleLocked)
+    // ─── Fase 2: trilhas (+ aulas) por módulo (lazy) ─────────────────────────
+    // Concorrência habilitada: vários módulos podem carregar ao mesmo tempo (cada um é
+    // idempotente e protegido por LoadState). Sem isso, o AsyncRelayCommand descartaria
+    // o carregamento de um módulo enquanto outro estivesse em andamento.
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task EnsureModuleLoaded(TrailModule module) =>
+        EnsureModuleLoadedAsync(module, _cts?.Token ?? CancellationToken.None);
+
+    private async Task EnsureModuleLoadedAsync(TrailModule module, CancellationToken ct)
     {
-        var palette = Palette[moduleIndex % Palette.Length];
-        var level = Levels[System.Math.Min(moduleIndex, Levels.Length - 1)];
-        var progressMap = lessonProgress.ToDictionary(p => p.LessonId);
+        // Módulos bloqueados também carregam: a trilha/aulas aparecem com cadeado.
+        if (module is null)
+            return;
+        if (module.LoadState is TrailModuleLoadState.Loading or TrailModuleLoadState.Loaded)
+            return;
 
-        var ordered = lessons.OrderBy(l => l.Order).ToList();
-        var nodes = new List<TrailNode>(ordered.Count);
+        module.LoadState = TrailModuleLoadState.Loading;
 
-        bool currentAssigned = false;
-        bool previousCompleted = true;
-
-        for (int i = 0; i < ordered.Count; i++)
+        try
         {
-            var lesson = ordered[i];
-            progressMap.TryGetValue(lesson.Id, out var lp);
-            bool completed = lp?.IsCompleted ?? false;
+            var trails = await _repository.GetModuleTrailsAsync(module, ct);
+            module.Trails = trails;
+            module.CompletedCount = trails.Sum(t => t.CompletedCount);
+            module.TotalCount = trails.Sum(t => t.TotalCount);
+            module.LoadError = null;
+            module.LoadState = TrailModuleLoadState.Loaded;
 
-            TrailNodeStatus status;
-            if (moduleLocked)
+            // Prefetch encadeado do próximo módulo (one-ahead). Continua MESMO através de módulos
+            // bloqueados: assim todo módulo é carregado por este caminho confiável, sem depender do
+            // disparo por viewport (que não reativa um item já reciclado). Cada load bloqueado é barato
+            // (nós sintéticos, sem buscar aulas), então a cadeia completa é segura.
+            int idx = Modules.IndexOf(module);
+            if (idx >= 0 && idx + 1 < Modules.Count)
+                _ = EnsureModuleLoadedAsync(Modules[idx + 1], ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // Carregamento substituído/cancelado: volta a NotLoaded para recarregar ao ser visto.
+            module.LoadState = TrailModuleLoadState.NotLoaded;
+        }
+        catch (Exception ex)
+        {
+            // Qualquer outra falha (rede, desserialização, dados inconsistentes) vira estado de erro
+            // visível com retry — em vez de spinner infinito.
+            module.LoadError = ex.Message;
+            module.LoadState = TrailModuleLoadState.Error;
+        }
+    }
+
+    // ─── Refresh silencioso (substitui o pull-to-refresh) ────────────────────
+    private async Task RefreshProgressAsync()
+    {
+        var ct = ResetCts();
+        try
+        {
+            var progressByModule = await _repository.GetOverallProgressAsync(ct);
+            if (ct.IsCancellationRequested) return;
+
+            bool previousCompleted = true;
+
+            foreach (var shell in Modules)
             {
-                status = TrailNodeStatus.Locked;
-            }
-            else if (completed)
-            {
-                status = TrailNodeStatus.Completed;
-            }
-            else if (previousCompleted && !currentAssigned)
-            {
-                status = TrailNodeStatus.Current;
-                currentAssigned = true;
-            }
-            else
-            {
-                status = TrailNodeStatus.Locked;
+                progressByModule.TryGetValue(shell.Id, out var mp);
+                int newTotal = mp?.TotalLessons ?? shell.TotalCount;
+                int newCompleted = mp?.CompletedLessons ?? 0;
+                bool newLocked = !previousCompleted;
+
+                bool changed = newCompleted != shell.CompletedCount
+                    || newTotal != shell.TotalCount
+                    || newLocked != shell.IsLocked;
+
+                shell.TotalCount = newTotal;
+                shell.CompletedCount = newCompleted;
+                shell.IsLocked = newLocked;
+
+                // Invalida módulos cujo progresso/bloqueio mudou para recarregarem as trilhas ao
+                // serem vistos (inclui os que acabaram de desbloquear: nós sintéticos → aulas reais).
+                if (changed)
+                    shell.LoadState = TrailModuleLoadState.NotLoaded;
+
+                previousCompleted = newTotal > 0 && newCompleted == newTotal;
             }
 
-            nodes.Add(new TrailNode
-            {
-                Id = lesson.Id,
-                ModuleId = module.Id,
-                ModuleTitle = module.Title,
-                Title = lesson.Title,
-                Description = lesson.Description,
-                AudioMediaId = lesson.AudioMediaId,
-                Index = i,
-                Status = status,
-                Emoji = LessonEmojis[i % LessonEmojis.Length],
-                IsBoss = i == ordered.Count - 1 && ordered.Count > 1,
-            });
+            _lastSyncUtc = DateTimeOffset.UtcNow;
+        }
+        catch (OperationCanceledException) { }
+        catch (HttpRequestException)
+        {
+            // Mantém os dados atuais em caso de falha de rede no refresh silencioso.
+        }
+    }
 
-            previousCompleted = completed;
+    // ─── Conclusão de aula: update otimista + reconciliação imediata ─────────
+    private void OnProgressChanged(ProgressChangedMessage msg)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            // Feedback instantâneo: marca a aula concluída na hora (se acertou tudo).
+            if (msg.LessonAllCorrect)
+                ApplyOptimisticCompletion(msg.ModuleId, msg.TrailId, msg.LessonId);
+
+            // Reconciliação autoritativa logo em seguida.
+            _ = SyncAfterCompletionAsync(msg.ModuleId);
+        });
+    }
+
+    private void ApplyOptimisticCompletion(Guid moduleId, Guid trailId, Guid lessonId)
+    {
+        var module = Modules.FirstOrDefault(m => m.Id == moduleId);
+        if (module is null || module.LoadState != TrailModuleLoadState.Loaded)
+            return;
+
+        var trail = module.Trails.FirstOrDefault(t => t.Id == trailId);
+        if (trail is null || trail.LoadState != TrailModuleLoadState.Loaded)
+            return;
+
+        var nodes = trail.Nodes.ToList();
+        var idx = nodes.FindIndex(n => n.Id == lessonId);
+        if (idx < 0 || nodes[idx].IsCompleted)
+            return;
+
+        nodes[idx] = CloneWithStatus(nodes[idx], TrailNodeStatus.Completed);
+
+        // O primeiro nó não concluído vira "atual"; os demais ficam bloqueados.
+        bool currentAssigned = false;
+        for (int i = 0; i < nodes.Count; i++)
+        {
+            if (nodes[i].IsCompleted) continue;
+            nodes[i] = CloneWithStatus(nodes[i], currentAssigned ? TrailNodeStatus.Locked : TrailNodeStatus.Current);
+            currentAssigned = true;
         }
 
-        return new TrailModule
-        {
-            Id = module.Id,
-            Title = module.Title,
-            Subtitle = module.Description,
-            Level = level,
-            Order = module.Order,
-            GradientFrom = palette.From,
-            GradientTo = palette.To,
-            AccentColor = palette.Accent,
-            Emoji = palette.Emoji,
-            Nodes = nodes,
-            IsLocked = moduleLocked,
-        };
+        trail.Nodes = nodes;
+        trail.CompletedCount = nodes.Count(n => n.IsCompleted);
+        module.CompletedCount = module.Trails.Sum(t => t.CompletedCount);
+    }
+
+    private static TrailNode CloneWithStatus(TrailNode n, TrailNodeStatus status) => new()
+    {
+        Id = n.Id,
+        TrailId = n.TrailId,
+        ModuleId = n.ModuleId,
+        ModuleTitle = n.ModuleTitle,
+        Title = n.Title,
+        Description = n.Description,
+        AudioMediaId = n.AudioMediaId,
+        Index = n.Index,
+        Status = status,
+        Emoji = n.Emoji,
+        IsBoss = n.IsBoss,
+    };
+
+    private async Task SyncAfterCompletionAsync(Guid moduleId)
+    {
+        await RefreshProgressAsync();
+
+        var ct = _cts?.Token ?? CancellationToken.None;
+
+        int idx = -1;
+        for (int i = 0; i < Modules.Count; i++)
+            if (Modules[i].Id == moduleId) { idx = i; break; }
+        if (idx < 0) return;
+
+        // Recarrega as trilhas/nós reais do módulo afetado e do próximo (que pode ter desbloqueado).
+        await EnsureModuleLoadedAsync(Modules[idx], ct);
+        if (idx + 1 < Modules.Count)
+            await EnsureModuleLoadedAsync(Modules[idx + 1], ct);
     }
 
     [RelayCommand]
@@ -206,7 +313,7 @@ public partial class LessonsViewModel(CatalogService catalog, ProgressService pr
         var audio = node.AudioMediaId is { } aid ? $"&audioMediaId={aid}" : "";
         var moduleTitle = Uri.EscapeDataString(node.ModuleTitle);
         await Shell.Current.GoToAsync(
-            $"lesson?moduleId={node.ModuleId}&lessonId={node.Id}&title={Uri.EscapeDataString(node.Title)}&description={desc}&moduleTitle={moduleTitle}{audio}");
+            $"lesson?moduleId={node.ModuleId}&trailId={node.TrailId}&lessonId={node.Id}&title={Uri.EscapeDataString(node.Title)}&description={desc}&moduleTitle={moduleTitle}{audio}");
     }
 
     public void Cleanup()
@@ -214,6 +321,5 @@ public partial class LessonsViewModel(CatalogService catalog, ProgressService pr
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
-        IsRefreshing = false;
     }
 }

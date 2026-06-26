@@ -7,6 +7,7 @@ using TeacherApp.App.Features.Lesson.Services;
 namespace TeacherApp.App.Features.Lesson.ViewModels;
 
 [QueryProperty(nameof(ModuleId), "moduleId")]
+[QueryProperty(nameof(TrailId), "trailId")]
 [QueryProperty(nameof(LessonId), "lessonId")]
 [QueryProperty(nameof(Title), "title")]
 [QueryProperty(nameof(Description), "description")]
@@ -25,6 +26,9 @@ public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : Obser
 
     [ObservableProperty]
     private string _moduleId = "";
+
+    [ObservableProperty]
+    private string _trailId = "";
 
     [ObservableProperty]
     private string _lessonId = "";
@@ -274,7 +278,7 @@ public partial class LessonViewModel(MediaPlaybackService mediaPlayback) : Obser
     {
         var moduleTitle = Uri.EscapeDataString(ModuleTitle);
         await Shell.Current.GoToAsync(
-            $"exercise?moduleId={ModuleId}&lessonId={LessonId}&moduleTitle={moduleTitle}");
+            $"exercise?moduleId={ModuleId}&trailId={TrailId}&lessonId={LessonId}&moduleTitle={moduleTitle}");
     }
 
     public void Cleanup()

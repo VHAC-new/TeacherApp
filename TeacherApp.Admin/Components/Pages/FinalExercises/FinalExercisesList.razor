@@ -11,7 +11,7 @@
         <MudText Typo="Typo.h4">Exercícios Finais</MudText>
         <MudText Typo="Typo.body2" Class="mud-text-secondary">Gerencie o conteúdo dos exercícios finais</MudText>
     </div>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenForm(null))" Disabled="@(_modules.Count == 0)">Novo Exercício Final</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenForm(null))" Disabled="@(_trails.Count == 0)">Novo Exercício Final</MudButton>
 </MudStack>
 
 @* Filtros — mesmo padrão da tela Lições (flex + gap, busca flex:1 + FullWidth, módulo à direita) *@
@@ -31,17 +31,17 @@
     </div>
     <div style="flex:0 0 auto; min-width:12.5rem; max-width:100%;">
         <MudSelect T="Guid?"
-                   Value="_filterModuleId"
-                   ValueChanged="OnModuleFilterChangedAsync"
-                   Label="Módulo"
+                   Value="_filterTrailId"
+                   ValueChanged="OnTrailFilterChangedAsync"
+                   Label="Trilha"
                    Clearable="true"
                    Variant="Variant.Outlined"
                    Margin="Margin.Dense"
                    FullWidth="true">
-            <MudSelectItem T="Guid?" Value="@null">Todos</MudSelectItem>
-            @foreach (var m in _modules)
+            <MudSelectItem T="Guid?" Value="@null">Todas</MudSelectItem>
+            @foreach (var t in _trails)
             {
-                <MudSelectItem T="Guid?" Value="@m.Id">@m.Title</MudSelectItem>
+                <MudSelectItem T="Guid?" Value="@t.Id">@TrailLabel(t)</MudSelectItem>
             }
         </MudSelect>
     </div>
@@ -65,13 +65,13 @@ else
         <HeaderContent>
             <MudTh>Pergunta</MudTh>
             <MudTh>Resposta</MudTh>
-            <MudTh>Módulo</MudTh>
+            <MudTh>Trilha</MudTh>
             <MudTh Style="width: 200px;">Ações</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Pergunta">@Truncate(context.Prompt, 60)</MudTd>
             <MudTd DataLabel="Resposta">@Truncate(context.ExpectedAnswer, 30)</MudTd>
-            <MudTd DataLabel="Módulo">@(_modules.FirstOrDefault(m => m.Id == context.ModuleId)?.Title ?? "—")</MudTd>
+            <MudTd DataLabel="Trilha">@(TrailLabelById(context.TrailId))</MudTd>
             <MudTd DataLabel="Ações">
                 <MudTooltip Text="Editar">
                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => OpenForm(context))" />
@@ -92,10 +92,10 @@ else
         <EditForm Model="_form" OnValidSubmit="Save">
             <DataAnnotationsValidator />
             <MudStack Spacing="3">
-                <MudSelect T="string" @bind-Value="_form.ModuleId" Label="Módulo" Variant="Variant.Outlined" Required="true">
-                    @foreach (var m in _modules)
+                <MudSelect T="string" @bind-Value="_form.TrailId" Label="Trilha" Variant="Variant.Outlined" Required="true">
+                    @foreach (var t in _trails)
                     {
-                        <MudSelectItem T="string" Value="@m.Id.ToString()">@m.Title</MudSelectItem>
+                        <MudSelectItem T="string" Value="@t.Id.ToString()">@TrailLabel(t)</MudSelectItem>
                     }
                 </MudSelect>
                 <MudTextField @bind-Value="_form.Prompt" For="@(() => _form.Prompt)" Label="Pergunta (Prompt)" Variant="Variant.Outlined" Lines="3" />
@@ -145,10 +145,11 @@ else
     };
 
     private List<TeacherApp.Contracts.Modules.ModuleResponse> _modules = [];
+    private List<TeacherApp.Contracts.Trails.TrailResponse> _trails = [];
     private List<TeacherApp.Contracts.FinalExercises.FinalExerciseResponse> _exercises = [];
     private bool _loading = true;
     private string? _error;
-    private Guid? _filterModuleId;
+    private Guid? _filterTrailId;
     private string? _searchTerm;
 
     private List<TeacherApp.Contracts.FinalExercises.FinalExerciseResponse> FilteredFinalExercises =>
@@ -156,11 +157,23 @@ else
             .Where(e => string.IsNullOrWhiteSpace(_searchTerm)
                 || e.Prompt.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
                 || e.ExpectedAnswer.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
-                || (_modules.FirstOrDefault(m => m.Id == e.ModuleId)?.Title?.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ?? false))
+                || TrailLabelById(e.TrailId).Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
             .OrderBy(e => e.Order)
             .ToList();
 
     private void OnSearchChanged() { }
+
+    private string TrailLabel(TeacherApp.Contracts.Trails.TrailResponse trail)
+    {
+        var modTitle = _modules.FirstOrDefault(m => m.Id == trail.ModuleId)?.Title ?? "—";
+        return $"{trail.Title} · {modTitle}";
+    }
+
+    private string TrailLabelById(Guid trailId)
+    {
+        var trail = _trails.FirstOrDefault(t => t.Id == trailId);
+        return trail is null ? "—" : TrailLabel(trail);
+    }
 
     private bool _showForm;
     private bool _saving;
@@ -170,7 +183,7 @@ else
 
     private sealed class FinalExerciseFormModel
     {
-        public string ModuleId { get; set; } = "";
+        public string TrailId { get; set; } = "";
 
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Pergunta obrigatória")]
         public string Prompt { get; set; } = "";
@@ -188,6 +201,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         _modules = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Modules.ModuleResponse>>("api/v1/admin/modules") ?? [];
+        _trails = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Trails.TrailResponse>>("api/v1/admin/trails") ?? [];
         await LoadAsync();
     }
 
@@ -197,7 +211,7 @@ else
         _error = null;
         try
         {
-            var query = _filterModuleId.HasValue ? $"?moduleId={_filterModuleId}" : "";
+            var query = _filterTrailId.HasValue ? $"?trailId={_filterTrailId}" : "";
             _exercises = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.FinalExercises.FinalExerciseResponse>>($"api/v1/admin/final-exercises{query}") ?? [];
         }
         catch (HttpRequestException)
@@ -210,9 +224,9 @@ else
         }
     }
 
-    private async Task OnModuleFilterChangedAsync(Guid? id)
+    private async Task OnTrailFilterChangedAsync(Guid? id)
     {
-        _filterModuleId = id;
+        _filterTrailId = id;
         await LoadAsync();
     }
 
@@ -222,7 +236,7 @@ else
         _form = exercise is null
             ? new FinalExerciseFormModel
             {
-                ModuleId = (_filterModuleId ?? _modules.FirstOrDefault()?.Id ?? Guid.Empty).ToString(),
+                TrailId = (_filterTrailId ?? _trails.FirstOrDefault()?.Id ?? Guid.Empty).ToString(),
                 Order = _exercises.Count + 1
             }
             : new FinalExerciseFormModel
@@ -234,7 +248,7 @@ else
                 IgnoreCase = exercise.IgnoreCase,
                 IgnoreWhitespace = exercise.IgnoreWhitespace,
                 Order = exercise.Order,
-                ModuleId = exercise.ModuleId.ToString()
+                TrailId = exercise.TrailId.ToString()
             };
         _formError = null;
         _showForm = true;
@@ -251,27 +265,27 @@ else
             HttpResponseMessage response;
             if (_editing is null)
             {
-                if (!Guid.TryParse(_form.ModuleId, out var moduleId))
+                if (!Guid.TryParse(_form.TrailId, out var trailId))
                 {
-                    _formError = "Selecione um módulo.";
+                    _formError = "Selecione uma trilha.";
                     return;
                 }
                 response = await Http.PostAsJsonAsync("api/v1/admin/final-exercises",
                     new TeacherApp.Contracts.FinalExercises.CreateFinalExerciseRequest(
-                        moduleId, _form.Prompt, _form.ExpectedAnswer, _form.Hint, _form.Explanation,
+                        trailId, _form.Prompt, _form.ExpectedAnswer, _form.Hint, _form.Explanation,
                         _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order));
             }
             else
             {
-                if (!Guid.TryParse(_form.ModuleId, out var editModuleId))
+                if (!Guid.TryParse(_form.TrailId, out var editTrailId))
                 {
-                    _formError = "Selecione um módulo.";
+                    _formError = "Selecione uma trilha.";
                     return;
                 }
                 response = await Http.PutAsJsonAsync($"api/v1/admin/final-exercises/{_editing.Id}",
                     new TeacherApp.Contracts.FinalExercises.UpdateFinalExerciseRequest(
                         _form.Prompt, _form.ExpectedAnswer, _form.Hint, _form.Explanation,
-                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order, editModuleId));
+                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order, editTrailId));
             }
 
             if (!response.IsSuccessStatusCode)

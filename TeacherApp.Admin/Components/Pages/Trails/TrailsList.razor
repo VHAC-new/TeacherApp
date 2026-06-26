@@ -1,26 +1,26 @@
-@page "/modules"
+@page "/trails"
 @attribute [Authorize]
 
 @inject HttpClient Http
 @inject IDialogService DialogService
 
-<PageTitle>Módulos — TeacherApp Admin</PageTitle>
+<PageTitle>Trilhas — TeacherApp Admin</PageTitle>
 
 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="my-4">
     <div>
-        <MudText Typo="Typo.h4">Módulos</MudText>
-        <MudText Typo="Typo.body2" Class="mud-text-secondary">Gerencie o conteúdo dos módulos</MudText>
+        <MudText Typo="Typo.h4">Trilhas</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Agrupe as lições em trilhas dentro de cada módulo</MudText>
     </div>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenForm(null))">Novo Módulo</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+               Disabled="@(_modules.Count == 0)" OnClick="@(() => OpenForm(null))">Nova Trilha</MudButton>
 </MudStack>
 
-@* Busca — mesmo container e espaçamentos da tela Lições *@
 <div class="mb-4" style="width:100%; display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px;">
     <div style="flex:1 1 12rem; min-width:0;">
         <MudTextField T="string"
                       @bind-Value="_searchTerm"
                       @bind-Value:after="OnSearchChanged"
-                      Placeholder="Buscar módulos..."
+                      Placeholder="Buscar trilhas..."
                       Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search"
                       Variant="Variant.Outlined"
@@ -29,33 +29,51 @@
                       DebounceInterval="250"
                       FullWidth="true" />
     </div>
+    <div style="flex:0 1 16rem; min-width:0;">
+        <MudSelect T="Guid?" Value="_filterModuleId" ValueChanged="OnFilterModuleChanged" Label="Módulo"
+                   Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" FullWidth="true">
+            @foreach (var m in _modules)
+            {
+                <MudSelectItem T="Guid?" Value="@m.Id">@m.Title</MudSelectItem>
+            }
+        </MudSelect>
+    </div>
 </div>
+
+@if (_modules.Count == 0 && !_loading)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">Cadastre um módulo antes de criar trilhas.</MudAlert>
+}
 
 @if (_loading)
 {
     <MudProgressLinear Indeterminate="true" />
 }
-else if (FilteredModules.Count == 0)
+else if (FilteredTrails.Count == 0)
 {
     <MudText Typo="Typo.body1" Class="mud-text-secondary">
         @(string.IsNullOrWhiteSpace(_searchTerm)
-            ? "Nenhum módulo cadastrado."
+            ? "Nenhuma trilha cadastrada."
             : "Nenhum resultado para a busca.")
     </MudText>
 }
 else
 {
-    <MudTable Items="@FilteredModules" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
+    <MudTable Items="@FilteredTrails" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
         <HeaderContent>
             <MudTh>Título</MudTh>
+            <MudTh>Módulo</MudTh>
             <MudTh>Descrição</MudTh>
-            <MudTh>Trilhas</MudTh>
+            <MudTh>Ordem</MudTh>
+            <MudTh>Lições</MudTh>
             <MudTh Style="width: 200px;">Ações</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Título">@context.Title</MudTd>
+            <MudTd DataLabel="Módulo">@(ModuleTitle(context.ModuleId))</MudTd>
             <MudTd DataLabel="Descrição">@(context.Description ?? "—")</MudTd>
-            <MudTd DataLabel="Trilhas">@context.TrailCount</MudTd>
+            <MudTd DataLabel="Ordem">@context.Order</MudTd>
+            <MudTd DataLabel="Lições">@context.LessonCount</MudTd>
             <MudTd DataLabel="Ações">
                 <MudTooltip Text="Editar">
                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => OpenForm(context))" />
@@ -70,12 +88,18 @@ else
 
 <MudDialog @bind-Visible="_showForm" Options="_dialogOptions">
     <TitleContent>
-        <MudText Typo="Typo.h6">@(_editing is null ? "Novo Módulo" : "Editar Módulo")</MudText>
+        <MudText Typo="Typo.h6">@(_editing is null ? "Nova Trilha" : "Editar Trilha")</MudText>
     </TitleContent>
     <DialogContent>
         <EditForm Model="_form" OnValidSubmit="Save">
             <DataAnnotationsValidator />
             <MudStack Spacing="3">
+                <MudSelect T="string" @bind-Value="_form.ModuleId" Label="Módulo" Variant="Variant.Outlined" Required="true">
+                    @foreach (var m in _modules)
+                    {
+                        <MudSelectItem T="string" Value="@m.Id.ToString()">@m.Title</MudSelectItem>
+                    }
+                </MudSelect>
                 <MudTextField @bind-Value="_form.Title" For="@(() => _form.Title)" Label="Título" Variant="Variant.Outlined" />
                 <MudTextField @bind-Value="_form.Description" Label="Descrição" Variant="Variant.Outlined" Lines="3" />
                 <MudText Typo="Typo.caption" Class="mud-text-secondary">Descrição apresentada aos alunos</MudText>
@@ -116,41 +140,57 @@ else
         BackdropClick = true
     };
 
+    private List<TeacherApp.Contracts.Trails.TrailResponse> _trails = [];
     private List<TeacherApp.Contracts.Modules.ModuleResponse> _modules = [];
     private bool _loading = true;
     private string? _error;
     private string? _searchTerm;
+    private Guid? _filterModuleId;
 
-    private List<TeacherApp.Contracts.Modules.ModuleResponse> FilteredModules =>
-        _modules
-            .Where(m => string.IsNullOrWhiteSpace(_searchTerm)
-                || m.Title.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
-                || (m.Description?.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ?? false))
-            .OrderBy(m => m.Order)
+    private List<TeacherApp.Contracts.Trails.TrailResponse> FilteredTrails =>
+        _trails
+            .Where(t => string.IsNullOrWhiteSpace(_searchTerm)
+                || t.Title.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
+                || (t.Description?.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ?? false))
+            .OrderBy(t => ModuleOrder(t.ModuleId))
+            .ThenBy(t => t.Order)
             .ToList();
 
+    private string ModuleTitle(Guid moduleId) => _modules.FirstOrDefault(m => m.Id == moduleId)?.Title ?? "—";
+    private int ModuleOrder(Guid moduleId) => _modules.FirstOrDefault(m => m.Id == moduleId)?.Order ?? int.MaxValue;
+
     private void OnSearchChanged() { /* triggers re-render via binding */ }
+
+    private async Task OnFilterModuleChanged(Guid? moduleId)
+    {
+        _filterModuleId = moduleId;
+        await LoadTrailsAsync();
+    }
 
     private bool _showForm;
     private bool _saving;
     private string? _formError;
-    private TeacherApp.Contracts.Modules.ModuleResponse? _editing;
-    private ModuleFormModel _form = new();
+    private TeacherApp.Contracts.Trails.TrailResponse? _editing;
+    private TrailFormModel _form = new();
 
-    private sealed class ModuleFormModel
+    private sealed class TrailFormModel
     {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Módulo obrigatório")]
+        public string ModuleId { get; set; } = "";
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Título obrigatório")]
         public string Title { get; set; } = "";
         public string? Description { get; set; }
         public int Order { get; set; } = 1;
     }
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
-
-    private async Task LoadAsync()
+    protected override async Task OnInitializedAsync()
     {
-        _loading = true;
-        _error = null;
+        await LoadModulesAsync();
+        await LoadTrailsAsync();
+    }
+
+    private async Task LoadModulesAsync()
+    {
         try
         {
             _modules = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Modules.ModuleResponse>>("api/v1/admin/modules") ?? [];
@@ -159,18 +199,49 @@ else
         {
             _error = "Erro ao carregar módulos.";
         }
+    }
+
+    private async Task LoadTrailsAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var query = _filterModuleId.HasValue ? $"?moduleId={_filterModuleId}" : "";
+            _trails = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Trails.TrailResponse>>($"api/v1/admin/trails{query}") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Erro ao carregar trilhas.";
+        }
         finally
         {
             _loading = false;
         }
     }
 
-    private void OpenForm(TeacherApp.Contracts.Modules.ModuleResponse? module)
+    private void OpenForm(TeacherApp.Contracts.Trails.TrailResponse? trail)
     {
-        _editing = module;
-        _form = module is null
-            ? new ModuleFormModel { Order = _modules.Count + 1 }
-            : new ModuleFormModel { Title = module.Title, Description = module.Description, Order = module.Order };
+        _editing = trail;
+        if (trail is null)
+        {
+            var defaultModuleId = _filterModuleId ?? _modules.FirstOrDefault()?.Id;
+            _form = new TrailFormModel
+            {
+                ModuleId = defaultModuleId?.ToString() ?? "",
+                Order = _trails.Count(t => defaultModuleId.HasValue && t.ModuleId == defaultModuleId.Value) + 1,
+            };
+        }
+        else
+        {
+            _form = new TrailFormModel
+            {
+                ModuleId = trail.ModuleId.ToString(),
+                Title = trail.Title,
+                Description = trail.Description,
+                Order = trail.Order,
+            };
+        }
         _formError = null;
         _showForm = true;
     }
@@ -179,6 +250,12 @@ else
 
     private async Task Save()
     {
+        if (!Guid.TryParse(_form.ModuleId, out var moduleId))
+        {
+            _formError = "Selecione um módulo.";
+            return;
+        }
+
         _saving = true;
         _formError = null;
         try
@@ -186,13 +263,13 @@ else
             HttpResponseMessage response;
             if (_editing is null)
             {
-                response = await Http.PostAsJsonAsync("api/v1/admin/modules",
-                    new TeacherApp.Contracts.Modules.CreateModuleRequest(_form.Title, _form.Description, _form.Order));
+                response = await Http.PostAsJsonAsync("api/v1/admin/trails",
+                    new TeacherApp.Contracts.Trails.CreateTrailRequest(moduleId, _form.Title, _form.Description, _form.Order));
             }
             else
             {
-                response = await Http.PutAsJsonAsync($"api/v1/admin/modules/{_editing.Id}",
-                    new TeacherApp.Contracts.Modules.UpdateModuleRequest(_form.Title, _form.Description, _form.Order));
+                response = await Http.PutAsJsonAsync($"api/v1/admin/trails/{_editing.Id}",
+                    new TeacherApp.Contracts.Trails.UpdateTrailRequest(moduleId, _form.Title, _form.Description, _form.Order));
             }
 
             if (!response.IsSuccessStatusCode)
@@ -202,7 +279,7 @@ else
             }
 
             _showForm = false;
-            await LoadAsync();
+            await LoadTrailsAsync();
         }
         catch (HttpRequestException)
         {
@@ -217,8 +294,8 @@ else
     private async Task Delete(Guid id)
     {
         var confirm = await DialogService.ShowMessageBoxAsync(
-            "Excluir módulo",
-            "Tem certeza que deseja excluir este módulo?",
+            "Excluir trilha",
+            "Tem certeza que deseja excluir esta trilha? As lições vinculadas também serão removidas.",
             yesText: "Excluir",
             cancelText: "Cancelar");
         if (confirm != true)
@@ -226,12 +303,12 @@ else
 
         try
         {
-            await Http.DeleteAsync($"api/v1/admin/modules/{id}");
-            await LoadAsync();
+            await Http.DeleteAsync($"api/v1/admin/trails/{id}");
+            await LoadTrailsAsync();
         }
         catch (HttpRequestException)
         {
-            _error = "Erro ao excluir módulo.";
+            _error = "Erro ao excluir trilha.";
         }
     }
 }

@@ -8,15 +8,15 @@ using TeacherApp.Contracts.FinalExercises;
 
 namespace TeacherApp.App.Features.Exercise.ViewModels;
 
-[QueryProperty(nameof(ModuleId), "moduleId")]
+[QueryProperty(nameof(TrailId), "trailId")]
 [QueryProperty(nameof(Title), "title")]
 public partial class FinalExercisesViewModel(CatalogService catalog, ExerciseService exerciseService) : ObservableObject, ICleanup
 {
     private CancellationTokenSource? _cts;
-    private string? _loadedModuleId;
+    private string? _loadedTrailId;
 
     [ObservableProperty]
-    private string _moduleId = "";
+    private string _trailId = "";
 
     [ObservableProperty]
     private string _title = "";
@@ -53,10 +53,10 @@ public partial class FinalExercisesViewModel(CatalogService catalog, ExerciseSer
     [RelayCommand]
     private async Task LoadAsync()
     {
-        if (!Guid.TryParse(ModuleId, out var id))
+        if (!Guid.TryParse(TrailId, out var id))
             return;
 
-        if (Exercises.Count > 0 && _loadedModuleId == ModuleId)
+        if (Exercises.Count > 0 && _loadedTrailId == TrailId)
             return;
 
         _cts?.Cancel();
@@ -79,7 +79,7 @@ public partial class FinalExercisesViewModel(CatalogService catalog, ExerciseSer
             CurrentIndex = 0;
             CorrectCount = 0;
             Finished = false;
-            _loadedModuleId = ModuleId;
+            _loadedTrailId = TrailId;
             OnPropertyChanged(nameof(CurrentExercise));
         }
         catch (OperationCanceledException)

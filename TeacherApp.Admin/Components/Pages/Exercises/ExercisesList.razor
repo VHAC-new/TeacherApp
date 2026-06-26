@@ -78,7 +78,18 @@ else
                     }
                 </MudSelect>
                 <MudTextField @bind-Value="_form.Prompt" For="@(() => _form.Prompt)" Label="Pergunta (Prompt)" Variant="Variant.Outlined" Lines="3" />
-                <MudTextField @bind-Value="_form.ExpectedAnswer" For="@(() => _form.ExpectedAnswer)" Label="Resposta esperada" Variant="Variant.Outlined" />
+                <MudSwitch @bind-Value="_form.RequiresAnswer" Color="Color.Primary"
+                           Label="Exigir resposta esperada" />
+                @if (_form.RequiresAnswer)
+                {
+                    <MudTextField @bind-Value="_form.ExpectedAnswer" Label="Resposta esperada" Variant="Variant.Outlined" />
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        Exercício aberto: sem resposta esperada — qualquer envio do aluno é aceito.
+                    </MudText>
+                }
                 <MudTextField @bind-Value="_form.Hint" Label="Dica" Variant="Variant.Outlined" />
                 <MudTextField @bind-Value="_form.Explanation" Label="Explicação" Variant="Variant.Outlined" Lines="2" />
                 <MudText Typo="Typo.caption" Class="mud-text-secondary">Conteúdo do exercício apresentado aos alunos</MudText>
@@ -124,6 +135,7 @@ else
     };
 
     private List<TeacherApp.Contracts.Modules.ModuleResponse> _modules = [];
+    private List<TeacherApp.Contracts.Trails.TrailResponse> _trails = [];
     private List<TeacherApp.Contracts.Lessons.LessonResponse> _lessons = [];
     private List<TeacherApp.Contracts.Exercises.ExerciseResponse> _exercises = [];
     private bool _loading = true;
@@ -143,8 +155,11 @@ else
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Pergunta obrigatória")]
         public string Prompt { get; set; } = "";
 
-        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Resposta obrigatória")]
+        // Validação da resposta esperada é condicional (só quando RequiresAnswer) — feita no Save/servidor.
         public string ExpectedAnswer { get; set; } = "";
+
+        /// <summary>Quando false, o exercício é aberto: não exige resposta esperada.</summary>
+        public bool RequiresAnswer { get; set; } = true;
 
         public string? Hint { get; set; }
         public string? Explanation { get; set; }
@@ -156,9 +171,11 @@ else
     protected override async Task OnInitializedAsync()
     {
         var modulesTask = Http.GetFromJsonAsync<List<TeacherApp.Contracts.Modules.ModuleResponse>>("api/v1/admin/modules");
+        var trailsTask = Http.GetFromJsonAsync<List<TeacherApp.Contracts.Trails.TrailResponse>>("api/v1/admin/trails");
         var lessonsTask = Http.GetFromJsonAsync<List<TeacherApp.Contracts.Lessons.LessonResponse>>("api/v1/admin/lessons");
-        await Task.WhenAll(modulesTask, lessonsTask);
+        await Task.WhenAll(modulesTask, trailsTask, lessonsTask);
         _modules = modulesTask.Result ?? [];
+        _trails = trailsTask.Result ?? [];
         _lessons = lessonsTask.Result ?? [];
         await LoadAsync();
     }
@@ -201,6 +218,7 @@ else
             {
                 Prompt = exercise.Prompt,
                 ExpectedAnswer = exercise.ExpectedAnswer,
+                RequiresAnswer = exercise.RequiresAnswer,
                 Hint = exercise.Hint,
                 Explanation = exercise.Explanation,
                 IgnoreCase = exercise.IgnoreCase,
@@ -220,6 +238,12 @@ else
         _formError = null;
         try
         {
+            if (_form.RequiresAnswer && string.IsNullOrWhiteSpace(_form.ExpectedAnswer))
+            {
+                _formError = "Informe a resposta esperada ou desative a opção.";
+                return;
+            }
+
             HttpResponseMessage response;
             if (_editing is null)
             {
@@ -231,7 +255,7 @@ else
                 response = await Http.PostAsJsonAsync("api/v1/admin/exercises",
                     new TeacherApp.Contracts.Exercises.CreateExerciseRequest(
                         lessonId, _form.Prompt, _form.ExpectedAnswer, _form.Hint, _form.Explanation,
-                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order));
+                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order, _form.RequiresAnswer));
             }
             else
             {
@@ -243,7 +267,7 @@ else
                 response = await Http.PutAsJsonAsync($"api/v1/admin/exercises/{_editing.Id}",
                     new TeacherApp.Contracts.Exercises.UpdateExerciseRequest(
                         _form.Prompt, _form.ExpectedAnswer, _form.Hint, _form.Explanation,
-                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order, editLessonId));
+                        _form.IgnoreCase, _form.IgnoreWhitespace, _form.Order, editLessonId, _form.RequiresAnswer));
             }
 
             if (!response.IsSuccessStatusCode)
@@ -295,6 +319,10 @@ else
         if (lesson is null)
             return "—";
 
-        return _modules.FirstOrDefault(m => m.Id == lesson.ModuleId)?.Title ?? "—";
+        var trail = _trails.FirstOrDefault(t => t.Id == lesson.TrailId);
+        if (trail is null)
+            return "—";
+
+        return _modules.FirstOrDefault(m => m.Id == trail.ModuleId)?.Title ?? "—";
     }
 }

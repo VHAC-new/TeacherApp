@@ -6,6 +6,7 @@ namespace TeacherApp.App.Features.Module.Models;
 public sealed class LessonWithProgress
 {
     public Guid Id { get; }
+    public Guid TrailId { get; }
     public string Title { get; }
     public string? Description { get; }
     public int Order { get; }
@@ -21,6 +22,7 @@ public sealed class LessonWithProgress
     public LessonWithProgress(LessonResponse lesson, LessonProgressResponse? progress, bool isLocked)
     {
         Id = lesson.Id;
+        TrailId = lesson.TrailId;
         Title = lesson.Title;
         Description = lesson.Description;
         Order = lesson.Order;

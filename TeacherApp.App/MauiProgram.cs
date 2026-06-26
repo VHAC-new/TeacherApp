@@ -41,14 +41,15 @@ public static class MauiProgram
         // Para API local: emulador Android "http://10.0.2.2:5092", Windows "http://localhost:5092".
         var apiBaseUrl =
 #if DEBUG
-             ApiEndpoints.VpsApi;
-             //"http://192.168.0.131:5092";
+             //ApiEndpoints.VpsApi;
+             "http://192.168.0.10:5092";
              //"http://10.0.2.2:5092";
 #else
             ApiEndpoints.VpsRelease;
 #endif
 
         builder.Services.AddSingleton<AppThemeService>();
+        builder.Services.AddSingleton<AppSessionState>();
         builder.Services.AddSingleton<TokenStore>();
         builder.Services.AddTransient<BearerTokenHandler>();
 
@@ -65,6 +66,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<CatalogService>();
         builder.Services.AddSingleton<ExerciseService>();
         builder.Services.AddSingleton<ProgressService>();
+        builder.Services.AddSingleton<TrailRepository>();
         builder.Services.AddSingleton<MediaPlaybackService>();
 
         builder.Services.AddTransient<LoginViewModel>();

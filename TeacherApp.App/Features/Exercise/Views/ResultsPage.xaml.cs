@@ -54,5 +54,9 @@ public partial class ResultsPage : ContentPage
         await Task.WhenAll(
             ActionsPanel.FadeTo(1, 300, Easing.CubicOut),
             ActionsPanel.TranslateTo(0, 0, 300, Easing.CubicOut));
+
+        // Celebração: confete cai do topo quando a pontuação é boa.
+        if (BindingContext is ResultsViewModel vm && vm.ScorePercent >= 60)
+            await Confetti.BurstAsync(new Point(Width / 2, 0), count: 36, durationMs: 1600);
     }
 }

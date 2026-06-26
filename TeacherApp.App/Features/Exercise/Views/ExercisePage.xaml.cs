@@ -9,6 +9,7 @@ public partial class ExercisePage : ContentPage
     private readonly ExerciseViewModel _vm;
     private bool _hintAnimating;
     private bool _pageActive = true;
+    private bool _floating;
 
     public ExercisePage(ExerciseViewModel vm)
     {
@@ -22,12 +23,14 @@ public partial class ExercisePage : ContentPage
     {
         base.OnAppearing();
         _pageActive = true;
+        StartFloating();
         await _vm.LoadCommand.ExecuteAsync(null);
     }
 
     protected override void OnDisappearing()
     {
         _pageActive = false;
+        _floating = false;
         AbortAnimations();
         _vm.PropertyChanged -= OnViewModelPropertyChanged;
         _vm.BeforeNavigateToResults = null;
@@ -43,11 +46,44 @@ public partial class ExercisePage : ContentPage
         HintContent.AbortAnimation("HintExpand");
         HintContent.AbortAnimation("HintCollapse");
         PageRoot.AbortAnimation("CompletionExit");
+        Mascot.AbortAnimation("MascotFloat");
+    }
+
+    // Float contínuo do avatar (padrão reutilizado da LessonsPage).
+    private void StartFloating()
+    {
+        if (_floating)
+            return;
+
+        _floating = true;
+        var anim = new Animation
+        {
+            { 0, 1, new Animation(v => Mascot.TranslationY = -10 * Math.Sin(v * Math.PI)) },
+            { 0, 1, new Animation(v => Mascot.Scale = 1 + 0.04 * Math.Sin(v * Math.PI)) },
+        };
+        Mascot.Animate("MascotFloat", anim, length: 1600, repeat: () => _floating);
     }
 
     private async void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (!_pageActive || e.PropertyName != nameof(ExerciseViewModel.IsHintVisible) || _hintAnimating)
+        if (!_pageActive)
+            return;
+
+        switch (e.PropertyName)
+        {
+            case nameof(ExerciseViewModel.IsHintVisible):
+                await HandleHintAsync();
+                break;
+
+            case nameof(ExerciseViewModel.LastResult):
+                await HandleResultAsync();
+                break;
+        }
+    }
+
+    private async Task HandleHintAsync()
+    {
+        if (_hintAnimating)
             return;
 
         _hintAnimating = true;
@@ -62,6 +98,47 @@ public partial class ExercisePage : ContentPage
         {
             _hintAnimating = false;
         }
+    }
+
+    private async Task HandleResultAsync()
+    {
+        // Próxima questão: esconde o balão e reposiciona o avatar.
+        if (_vm.LastResult is null)
+        {
+            Mascot.AbortAnimation("MascotFloat");
+            Mascot.TranslationX = 0;
+            Mascot.Scale = 1;
+            StartFloating();
+            SpeechBubble.IsVisible = false;
+            SpeechBubble.Opacity = 0;
+            return;
+        }
+
+        await RevealBubbleAsync();
+
+        if (_vm.LastResult == true)
+        {
+            await Task.WhenAll(
+                Mascot.BounceAsync(),
+                Confetti.BurstAsync());
+        }
+        else
+        {
+            await Mascot.ShakeAsync();
+        }
+    }
+
+    private async Task RevealBubbleAsync()
+    {
+        if (!_pageActive)
+            return;
+
+        SpeechBubble.Opacity = 0;
+        SpeechBubble.Scale = 0.85;
+        SpeechBubble.IsVisible = true;
+        await Task.WhenAll(
+            SpeechBubble.FadeTo(1, 220, Easing.CubicOut),
+            SpeechBubble.ScaleTo(1, 260, Easing.SpringOut));
     }
 
     private async Task ExpandHintAsync()
@@ -112,7 +189,7 @@ public partial class ExercisePage : ContentPage
 
         var overlay = new BoxView
         {
-            Color = Color.FromArgb("#4F7CFF"),
+            Color = Color.FromArgb("#7C5DF7"),
             Opacity = 0,
             InputTransparent = true,
             HorizontalOptions = LayoutOptions.Fill,

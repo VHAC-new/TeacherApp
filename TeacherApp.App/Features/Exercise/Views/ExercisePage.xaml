@@ -2,86 +2,128 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:TeacherApp.App.Features.Exercise.ViewModels"
+             xmlns:controls="clr-namespace:TeacherApp.App.Core.Controls"
              x:Class="TeacherApp.App.Features.Exercise.Views.ExercisePage"
              x:DataType="vm:ExerciseViewModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
+             BackgroundColor="#0E0D24">
 
-    <Grid x:Name="PageRoot" RowDefinitions="Auto,*">
+    <!-- Fundo dark roxo gamificado (igual ao restante do app) -->
+    <ContentPage.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="0.3,1">
+            <GradientStop Color="#16133A" Offset="0.0" />
+            <GradientStop Color="#12112A" Offset="0.5" />
+            <GradientStop Color="#0E0D24" Offset="1.0" />
+        </LinearGradientBrush>
+    </ContentPage.Background>
 
-        <!-- Gradient Header -->
-        <Grid Grid.Row="0" Padding="20,16,20,20" MinimumHeightRequest="120">
-            <Grid.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="{StaticResource Primary}" Offset="0.0" />
-                    <GradientStop Color="{StaticResource Tertiary}" Offset="1.0" />
-                </LinearGradientBrush>
-            </Grid.Background>
+    <Grid x:Name="PageRoot" RowDefinitions="Auto,*,Auto">
 
-            <VerticalStackLayout Spacing="8" VerticalOptions="End">
-                <HorizontalStackLayout Spacing="12">
-                    <Label Text="&#x2190;" TextColor="White" FontSize="24"
-                           VerticalOptions="Center">
-                        <Label.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnBackTapped" />
-                        </Label.GestureRecognizers>
-                    </Label>
-                    <Label Text="Practice Exercises" TextColor="White" FontSize="20"
-                           FontAttributes="Bold" VerticalOptions="Center" />
-                </HorizontalStackLayout>
+        <!-- Topo: fechar · progresso · vidas (decorativo) -->
+        <Grid Grid.Row="0" Padding="16,14,16,6" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
 
-                <Label Text="{Binding QuestionLabel}" TextColor="#FFFFFFCC" FontSize="14" />
+            <Label Grid.Column="0" Text="&#x2715;" TextColor="#8A85B8" FontSize="22"
+                   VerticalOptions="Center">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnBackTapped" />
+                </Label.GestureRecognizers>
+            </Label>
 
-                <!-- Segmented Progress Bar -->
+            <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
                 <CollectionView ItemsSource="{Binding Segments}" HeightRequest="8"
-                                ItemsLayout="HorizontalList">
+                                HorizontalOptions="Center"
+                                ItemsLayout="HorizontalList"
+                                InputTransparent="True">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="vm:SegmentState">
-                            <Border HeightRequest="6" WidthRequest="28"
-                                    Margin="1,0" StrokeShape="RoundRectangle 3"
+                            <Border HeightRequest="6" WidthRequest="30"
+                                    Margin="2,0" StrokeShape="RoundRectangle 3"
                                     Stroke="Transparent"
                                     BackgroundColor="{Binding Color}" />
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                 </CollectionView>
+                <Label Text="{Binding QuestionLabel}" TextColor="#8A85B8" FontSize="12"
+                       HorizontalOptions="Center" />
             </VerticalStackLayout>
+
+            <!-- Vidas (visual apenas, sem sistema de vidas) -->
+            <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center">
+                <Label Text="&#x2764;" TextColor="#F472B6" FontSize="16" />
+                <Label Text="&#x2764;" TextColor="#4A3F6B" FontSize="16" />
+            </HorizontalStackLayout>
         </Grid>
 
-        <!-- Content -->
-        <ScrollView Grid.Row="1"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
-            <VerticalStackLayout Spacing="16" Padding="16,20,16,32">
+        <!-- Conteúdo -->
+        <ScrollView Grid.Row="1" BackgroundColor="Transparent">
+            <VerticalStackLayout Spacing="18" Padding="20,8,20,24">
 
-                <Label Text="{Binding Error}" TextColor="Red" FontSize="14"
+                <!-- Avatar flutuante + balão de fala + confete -->
+                <Grid HeightRequest="190" Margin="0,8,0,0">
+                    <VerticalStackLayout Spacing="6" HorizontalOptions="Center" VerticalOptions="End">
+                        <!-- Balão de feedback (oculto até responder) -->
+                        <Border x:Name="SpeechBubble"
+                                IsVisible="False"
+                                Opacity="0"
+                                Padding="14,9" StrokeThickness="0"
+                                StrokeShape="RoundRectangle 16"
+                                HorizontalOptions="Center"
+                                BackgroundColor="#2A2650">
+                            <Label x:Name="SpeechLabel" FontSize="14" FontAttributes="Bold"
+                                   TextColor="#E8ECF4" HorizontalTextAlignment="Center">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding LastResult}" Value="True">
+                                        <Setter Property="Text" Value="Muito bem! Você acertou!" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Label" Binding="{Binding LastResult}" Value="False">
+                                        <Setter Property="Text" Value="Quase! Continue assim." />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+                        </Border>
+
+                        <Image x:Name="Mascot" Source="wolf_mascot.png"
+                               WidthRequest="120" HeightRequest="120"
+                               HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+
+                    <controls:ConfettiView x:Name="Confetti" InputTransparent="True" />
+                </Grid>
+
+                <!-- Título do tópico -->
+                <Label Text="{Binding ModuleTitle}" FontSize="20" FontAttributes="Bold"
+                       TextColor="#E8ECF4" HorizontalOptions="Center"
+                       IsVisible="{Binding ModuleTitle, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
+
+                <Label Text="{Binding Error}" TextColor="#F87171" FontSize="14"
                        IsVisible="{Binding Error, Converter={StaticResource IsNotNullConverter}}" />
 
-                <!-- Question Card -->
-                <Border Padding="20" StrokeShape="RoundRectangle 14"
-                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource CardBackgroundDark}}">
+                <!-- Pergunta -->
+                <Border Padding="20" StrokeShape="RoundRectangle 16"
+                        Stroke="#2A2650" StrokeThickness="1"
+                        BackgroundColor="#1A1E2E">
                     <Label Text="{Binding CurrentExercise.Prompt}" FontSize="18"
-                           LineBreakMode="WordWrap"
-                           TextColor="{AppThemeBinding Light={StaticResource Foreground}, Dark={StaticResource ForegroundDark}}" />
+                           LineBreakMode="WordWrap" TextColor="#E8ECF4" />
                 </Border>
 
-                <!-- Answer Input -->
-                <Border Padding="4,0" StrokeShape="RoundRectangle 12"
-                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}"
-                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource CardBackgroundDark}}">
-                    <Entry Placeholder="Type your answer here..."
+                <!-- Campo de resposta -->
+                <Border Padding="4,0" StrokeShape="RoundRectangle 14"
+                        Stroke="#2A2650" StrokeThickness="1"
+                        BackgroundColor="#1A1E2E">
+                    <Entry Placeholder="Digite sua resposta aqui..."
                            Text="{Binding Answer}"
                            ReturnType="Send"
                            FontSize="16"
-                           Margin="12,0"
-                           TextColor="{AppThemeBinding Light={StaticResource Foreground}, Dark={StaticResource ForegroundDark}}"
-                           PlaceholderColor="{StaticResource MutedForeground}"
+                           Margin="12,2"
+                           TextColor="#E8ECF4"
+                           PlaceholderColor="#6E6790"
                            IsEnabled="{Binding LastResult, Converter={StaticResource IsNullConverter}}" />
                 </Border>
 
-                <!-- Collapsible Hint -->
-                <Border StrokeShape="RoundRectangle 12"
-                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}"
-                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource CardBackgroundDark}}"
+                <!-- Dica colapsável -->
+                <Border StrokeShape="RoundRectangle 14"
+                        Stroke="#2A2650" StrokeThickness="1"
+                        BackgroundColor="#1A1E2E"
                         IsVisible="{Binding CurrentExercise.Hint, Converter={StaticResource IsNotNullOrEmptyConverter}}">
                     <VerticalStackLayout Spacing="0">
                         <Grid Padding="16,14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
@@ -90,79 +132,86 @@
                             </Grid.GestureRecognizers>
                             <Label Grid.Column="0" Text="&#x1F4A1;" FontSize="18" VerticalOptions="Center" />
                             <Label Grid.Column="1" Text="{Binding HintToggleLabel}" FontSize="15"
-                                   TextColor="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}"
-                                   VerticalOptions="Center" />
+                                   TextColor="#C4B8FF" VerticalOptions="Center" />
                             <Label Grid.Column="2" Text="{Binding HintChevronGlyph}"
                                    FontFamily="MaterialIcons" FontSize="22"
-                                   TextColor="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}"
-                                   VerticalOptions="Center" HorizontalOptions="End" />
+                                   TextColor="#8A85B8" VerticalOptions="Center" HorizontalOptions="End" />
                         </Grid>
                         <Border x:Name="HintContent"
                                 IsVisible="False"
                                 Padding="16,12"
                                 StrokeThickness="0"
-                                StrokeShape="RoundRectangle 0,0,12,12"
-                                BackgroundColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource SecondaryDark}}">
+                                StrokeShape="RoundRectangle 0,0,14,14"
+                                BackgroundColor="#16142E">
                             <Label Text="{Binding CurrentExercise.Hint}" FontSize="14"
-                                   TextColor="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}"
-                                   LineBreakMode="WordWrap" />
+                                   TextColor="#8A85B8" LineBreakMode="WordWrap" />
                         </Border>
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- Result Feedback -->
+                <!-- Explicação do feedback -->
                 <Border IsVisible="{Binding LastResult, Converter={StaticResource IsNotNullConverter}}"
-                        Padding="16" StrokeShape="RoundRectangle 12"
-                        Stroke="Transparent">
+                        Padding="16" StrokeShape="RoundRectangle 14" StrokeThickness="1">
                     <Border.Triggers>
                         <DataTrigger TargetType="Border" Binding="{Binding LastResult}" Value="True">
-                            <Setter Property="BackgroundColor" Value="#E8F5E9" />
+                            <Setter Property="BackgroundColor" Value="#142A22" />
+                            <Setter Property="Stroke" Value="#10B981" />
                         </DataTrigger>
                         <DataTrigger TargetType="Border" Binding="{Binding LastResult}" Value="False">
-                            <Setter Property="BackgroundColor" Value="#FFEBEE" />
+                            <Setter Property="BackgroundColor" Value="#2A1620" />
+                            <Setter Property="Stroke" Value="#F44336" />
                         </DataTrigger>
                     </Border.Triggers>
-                    <VerticalStackLayout Spacing="8">
-                        <Label FontSize="20" FontAttributes="Bold">
+                    <VerticalStackLayout Spacing="6">
+                        <Label FontSize="17" FontAttributes="Bold">
                             <Label.Triggers>
                                 <DataTrigger TargetType="Label" Binding="{Binding LastResult}" Value="True">
-                                    <Setter Property="Text" Value="&#x2714; Correct!" />
-                                    <Setter Property="TextColor" Value="#2E7D32" />
+                                    <Setter Property="Text" Value="&#x2714; Correto!" />
+                                    <Setter Property="TextColor" Value="#34D399" />
                                 </DataTrigger>
                                 <DataTrigger TargetType="Label" Binding="{Binding LastResult}" Value="False">
-                                    <Setter Property="Text" Value="&#x2718; Incorrect" />
-                                    <Setter Property="TextColor" Value="#C62828" />
+                                    <Setter Property="Text" Value="&#x2718; Incorreto" />
+                                    <Setter Property="TextColor" Value="#F87171" />
                                 </DataTrigger>
                             </Label.Triggers>
                         </Label>
-                        <Label Text="{Binding Explanation}" FontSize="14"
-                               TextColor="{StaticResource Gray600}"
+                        <Label Text="{Binding Explanation}" FontSize="14" TextColor="#C4B8FF"
+                               LineBreakMode="WordWrap"
                                IsVisible="{Binding Explanation, Converter={StaticResource IsNotNullConverter}}" />
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- Submit Button -->
-                <Button Text="Submit Answer"
-                        Command="{Binding SubmitCommand}"
-                        IsVisible="{Binding LastResult, Converter={StaticResource IsNullConverter}}"
-                        IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"
-                        BackgroundColor="{StaticResource Primary}"
-                        TextColor="White" FontAttributes="Bold" FontSize="16"
-                        HeightRequest="54" CornerRadius="12" />
-
-                <!-- Next Button -->
-                <Button Text="Next Question"
-                        Command="{Binding NextCommand}"
-                        IsVisible="{Binding LastResult, Converter={StaticResource IsNotNullConverter}}"
-                        IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"
-                        BackgroundColor="{StaticResource Tertiary}"
-                        TextColor="White" FontAttributes="Bold" FontSize="16"
-                        HeightRequest="54" CornerRadius="12" />
-
                 <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
-                                   Color="{StaticResource Primary}" />
+                                   Color="#7C5DF7" />
 
             </VerticalStackLayout>
         </ScrollView>
+
+        <!-- Rodapé: botão de ação (muda de papel por estado) -->
+        <Grid Grid.Row="2" Padding="20,8,20,20">
+            <Button Text="Enviar resposta"
+                    Command="{Binding SubmitCommand}"
+                    IsVisible="{Binding LastResult, Converter={StaticResource IsNullConverter}}"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"
+                    BackgroundColor="#7C5DF7"
+                    TextColor="White" FontAttributes="Bold" FontSize="16"
+                    HeightRequest="54" CornerRadius="14" />
+
+            <Button Text="Continuar"
+                    Command="{Binding NextCommand}"
+                    IsVisible="{Binding LastResult, Converter={StaticResource IsNotNullConverter}}"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBoolConverter}}"
+                    TextColor="White" FontAttributes="Bold" FontSize="16"
+                    HeightRequest="54" CornerRadius="14">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding LastResult}" Value="True">
+                        <Setter Property="BackgroundColor" Value="#10B981" />
+                    </DataTrigger>
+                    <DataTrigger TargetType="Button" Binding="{Binding LastResult}" Value="False">
+                        <Setter Property="BackgroundColor" Value="#F44336" />
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+        </Grid>
     </Grid>
 </ContentPage>
