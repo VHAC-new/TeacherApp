@@ -1,14 +1,17 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Graphics;
 using TeacherApp.App.Core;
+using TeacherApp.App.Core.Messages;
 using TeacherApp.App.Features.Home.Services;
 using TeacherApp.App.Features.Profile.Models;
 
 namespace TeacherApp.App.Features.Profile.ViewModels;
 
-public partial class ProfileViewModel(ProgressService progress) : ObservableObject, ICleanup
+public partial class ProfileViewModel : ObservableObject, ICleanup
 {
     private static readonly Color[] WorldColors =
     [
@@ -18,11 +21,20 @@ public partial class ProfileViewModel(ProgressService progress) : ObservableObje
         Color.FromArgb("#f59e0b"),
     ];
 
+    private readonly ProgressService _progress;
+
     private CancellationTokenSource? _cts;
     private bool _hasLoaded;
 
-    [ObservableProperty]
-    private bool _isRefreshing;
+    public ProfileViewModel(ProgressService progress)
+    {
+        _progress = progress;
+
+        // Mantém o perfil sincronizado quando uma aula é concluída em outra tela.
+        // NÃO desregistrar no Cleanup: a mensagem chega enquanto o usuário está fora desta aba.
+        WeakReferenceMessenger.Default.Register<ProgressChangedMessage>(
+            this, static (r, _) => ((ProfileViewModel)r).OnProgressChanged());
+    }
 
     [ObservableProperty]
     private string? _error;
@@ -50,16 +62,14 @@ public partial class ProfileViewModel(ProgressService progress) : ObservableObje
     [RelayCommand]
     private Task LoadAsync() => LoadInternalAsync(forceRefresh: false);
 
-    [RelayCommand]
-    private Task RefreshAsync() => LoadInternalAsync(forceRefresh: true);
+    // Recarrega o progresso quando uma aula é concluída (mensagem da tela de exercícios).
+    private void OnProgressChanged() =>
+        MainThread.BeginInvokeOnMainThread(() => _ = LoadInternalAsync(forceRefresh: true));
 
     private async Task LoadInternalAsync(bool forceRefresh)
     {
         if (!forceRefresh && _hasLoaded && Worlds.Count > 0)
-        {
-            IsRefreshing = false;
             return;
-        }
 
         _cts?.Cancel();
         _cts?.Dispose();
@@ -70,7 +80,7 @@ public partial class ProfileViewModel(ProgressService progress) : ObservableObje
 
         try
         {
-            var overall = await progress.GetOverallAsync(ct);
+            var overall = await _progress.GetOverallAsync(ct);
             if (ct.IsCancellationRequested) return;
 
             Worlds.Clear();
@@ -108,10 +118,6 @@ public partial class ProfileViewModel(ProgressService progress) : ObservableObje
         {
             Error = "Resposta inesperada do servidor.";
         }
-        finally
-        {
-            IsRefreshing = false;
-        }
     }
 
     [RelayCommand]
@@ -125,6 +131,5 @@ public partial class ProfileViewModel(ProgressService progress) : ObservableObje
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
-        IsRefreshing = false;
     }
 }

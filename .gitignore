@@ -46,6 +46,9 @@ appsettings.*.json
 *.key
 *.pem
 
+# VPS
+docs/vps/
+
 # MAUI / Xamarin / Android / iOS
 **/Resources/**/obj/
 **/platforms/**/obj/

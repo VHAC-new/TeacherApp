@@ -44,7 +44,7 @@ public partial class ResultsViewModel : ObservableObject
     private string _trophy = "\uD83C\uDFC6";
 
     [ObservableProperty]
-    private Color _headlineColor = Color.FromArgb("#4F7CFF");
+    private Color _headlineColor = Color.FromArgb("#7C5DF7");
 
     partial void OnCorrectChanged(string value) => RecalculateScore();
     partial void OnTotalChanged(string value) => RecalculateScore();
@@ -60,29 +60,29 @@ public partial class ResultsViewModel : ObservableObject
 
         if (ScorePercent >= 80)
         {
-            Headline = "Excellent Work!";
+            Headline = "Excelente trabalho!";
             Trophy = "\uD83C\uDFC6";
-            HeadlineColor = Color.FromArgb("#10B981");
+            HeadlineColor = Color.FromArgb("#34D399");
         }
         else if (ScorePercent >= 50)
         {
-            Headline = "Good Job!";
+            Headline = "Bom trabalho!";
             Trophy = "\u2B50";
-            HeadlineColor = Color.FromArgb("#FF9800");
+            HeadlineColor = Color.FromArgb("#FBBF24");
         }
         else
         {
-            Headline = "Keep Practicing!";
+            Headline = "Continue praticando!";
             Trophy = "\uD83D\uDCAA";
-            HeadlineColor = Color.FromArgb("#F44336");
+            HeadlineColor = Color.FromArgb("#F87171");
         }
     }
 
     [RelayCommand]
     private async Task ContinueLearning()
     {
-        await Shell.Current.GoToAsync(
-            $"//lessons/module?moduleId={ModuleId}&title={Uri.EscapeDataString(ModuleTitle)}");
+        // Volta para a jornada (Módulo › Trilhas › Aulas) na aba de aulas.
+        await Shell.Current.GoToAsync("//lessons");
     }
 
     [RelayCommand]

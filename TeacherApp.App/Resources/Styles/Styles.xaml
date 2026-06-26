@@ -418,10 +418,11 @@
         <Setter Property="Shell.DisabledColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray950}}" />
         <Setter Property="Shell.UnselectedColor" Value="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray200}}" />
         <Setter Property="Shell.NavBarHasShadow" Value="False" />
-        <Setter Property="Shell.TabBarBackgroundColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource CardBackgroundDark}}" />
-        <Setter Property="Shell.TabBarForegroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-        <Setter Property="Shell.TabBarTitleColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-        <Setter Property="Shell.TabBarUnselectedColor" Value="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}" />
+        <!-- Tab bar no tema roxo gamificado (igual às páginas), independente de claro/escuro do sistema -->
+        <Setter Property="Shell.TabBarBackgroundColor" Value="{StaticResource GamifiedTabBarBackground}" />
+        <Setter Property="Shell.TabBarForegroundColor" Value="{StaticResource AccentPurple}" />
+        <Setter Property="Shell.TabBarTitleColor" Value="{StaticResource AccentPurple}" />
+        <Setter Property="Shell.TabBarUnselectedColor" Value="{StaticResource AccentPurpleMuted}" />
     </Style>
 
     <Style TargetType="NavigationPage">

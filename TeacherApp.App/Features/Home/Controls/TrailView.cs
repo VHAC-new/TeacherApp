@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using System.Linq;
 using System.Windows.Input;
+using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Layouts;
@@ -8,9 +10,13 @@ using TeacherApp.App.Features.Home.Models;
 namespace TeacherApp.App.Features.Home.Controls;
 
 /// <summary>
-/// Renderiza um módulo ("mundo") como trilha gamificada (estilo Figma):
-/// card de cabeçalho + caminho zig-zag tracejado + nós (lições) + mascote.
-/// Módulos bloqueados são exibidos como um card recolhido.
+/// Renderiza uma <see cref="Trail"/> (trilha) como caminho gamificado (estilo Figma):
+/// card "TRILHA" + caminho zig-zag tracejado + nós (aulas) + mascote.
+/// Trilhas bloqueadas exibem o card recolhido com cadeado.
+///
+/// O esqueleto (card, área da trilha, GraphicsView do caminho) é montado uma vez por
+/// instância e reaproveitado a cada reciclagem do StackLayout do módulo: atualizamos os
+/// valores in-place e reconstruímos apenas os nós (que variam por trilha).
 /// </summary>
 public sealed class TrailView : ContentView
 {
@@ -25,12 +31,157 @@ public sealed class TrailView : ContentView
         set => SetValue(NodeCommandProperty, value);
     }
 
+    private Trail? _trail;
+    private VisualElement? _floatTarget;
+
+    // ─── Esqueleto reaproveitado (montado uma vez por instância) ──────────────
+    private readonly TrailCard _card;
+    private readonly ContentView _bodyHost;          // alterna entre placeholder e trilha
+    private readonly Grid _placeholderArea;          // corpo durante o carregamento (spinner)
+    private readonly ActivityIndicator _placeholderSpinner;
+    private readonly AbsoluteLayout _trailArea;      // corpo quando carregado (caminho + nós + mascote)
+    private readonly GraphicsView _pathView;         // caminho tracejado (índice 0, sempre presente)
+    private readonly TrailPathDrawable _pathDrawable;
+    private readonly VerticalStackLayout _root;
+
+    public TrailView()
+    {
+        _card = new TrailCard();
+
+        _pathDrawable = new TrailPathDrawable();
+        _pathView = new GraphicsView { Drawable = _pathDrawable, InputTransparent = true };
+        AbsoluteLayout.SetLayoutBounds(_pathView, new Rect(0, 0, 1, 1));
+        AbsoluteLayout.SetLayoutFlags(_pathView, AbsoluteLayoutFlags.All);
+
+        _trailArea = new AbsoluteLayout();
+        _trailArea.Add(_pathView);
+
+        _placeholderSpinner = new ActivityIndicator
+        {
+            IsRunning = true,
+            WidthRequest = 32,
+            HeightRequest = 32,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Start,
+            Margin = new Thickness(0, 32, 0, 0),
+        };
+        _placeholderArea = new Grid();
+        _placeholderArea.Add(_placeholderSpinner);
+
+        _bodyHost = new ContentView();
+
+        _root = new VerticalStackLayout { Spacing = 0 };
+        _root.Add(_card.View);
+        _root.Add(_bodyHost);
+    }
+
     protected override void OnBindingContextChanged()
     {
         base.OnBindingContextChanged();
-        Content = BindingContext is TrailModule module
-            ? (module.IsLocked ? BuildLockedCard(module) : BuildActive(module))
-            : null;
+
+        if (_trail is not null)
+            _trail.PropertyChanged -= OnTrailPropertyChanged;
+
+        _trail = BindingContext as Trail;
+
+        if (_trail is not null)
+            _trail.PropertyChanged += OnTrailPropertyChanged;
+
+        Rebuild();
+    }
+
+    private void OnTrailPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        bool structural = e.PropertyName is nameof(Trail.LoadState) or nameof(Trail.IsLocked);
+        bool contentWhileLoaded =
+            e.PropertyName is nameof(Trail.Nodes) or nameof(Trail.CompletedCount)
+            && _trail?.LoadState == TrailModuleLoadState.Loaded;
+
+        if (!structural && !contentWhileLoaded)
+            return;
+
+        MainThread.BeginInvokeOnMainThread(Rebuild);
+    }
+
+    private void Rebuild()
+    {
+        AbortFloat();
+
+        if (_trail is null)
+        {
+            Content = null;
+            return;
+        }
+
+        _card.Update(_trail);
+
+        if (_trail.LoadState == TrailModuleLoadState.Loaded)
+        {
+            if (!ReferenceEquals(_bodyHost.Content, _trailArea))
+                _bodyHost.Content = _trailArea;
+            UpdateTrail(_trail);
+        }
+        else
+        {
+            _placeholderArea.HeightRequest = _trail.TrailHeight;
+            _placeholderSpinner.Color = C(_trail.AccentColor);
+            if (!ReferenceEquals(_bodyHost.Content, _placeholderArea))
+                _bodyHost.Content = _placeholderArea;
+        }
+
+        if (!ReferenceEquals(Content, _root))
+            Content = _root;
+    }
+
+    private void UpdateTrail(Trail t)
+    {
+        _trailArea.HeightRequest = t.TrailHeight;
+
+        // Caminho tracejado (reusa o GraphicsView/drawable; só atualiza os dados e redesenha).
+        _pathDrawable.FracX = t.Nodes.Select(n => FracOf(n.Index)).ToList();
+        _pathDrawable.Cy = t.Nodes.Select(n => CyOf(n.Index)).ToList();
+        _pathDrawable.NodeCompleted = t.Nodes.Select(n => n.IsCompleted).ToList();
+        _pathDrawable.AccentColor = t.AccentColor;
+        _pathView.Invalidate();
+
+        // Remove nós/mascote anteriores, preservando o GraphicsView (índice 0).
+        for (int i = _trailArea.Children.Count - 1; i >= 1; i--)
+            _trailArea.Children.RemoveAt(i);
+
+        // Nós.
+        foreach (var node in t.Nodes)
+        {
+            var container = BuildNode(t, node);
+            double bubbleSize = node.IsBoss ? 72 : node.IsCurrent ? 68 : 60;
+            double pillOffset = node.IsCurrent ? 32 : 0;
+            double topY = CyOf(node.Index) - (pillOffset + bubbleSize / 2);
+
+            AbsoluteLayout.SetLayoutBounds(container, new Rect(FracOf(node.Index), topY, 100, AbsoluteLayout.AutoSize));
+            AbsoluteLayout.SetLayoutFlags(container, AbsoluteLayoutFlags.XProportional);
+            _trailArea.Add(container);
+        }
+
+        // Mascote junto ao nó atual.
+        int curIdx = t.CurrentIndex;
+        if (curIdx >= 0)
+        {
+            var mascot = BuildMascot();
+            double mFrac = FracOf(curIdx) switch
+            {
+                0.22 => 0.66,
+                0.76 => 0.30,
+                _ => 0.85,
+            };
+            AbsoluteLayout.SetLayoutBounds(mascot, new Rect(mFrac, CyOf(curIdx) - 44, 120, AbsoluteLayout.AutoSize));
+            AbsoluteLayout.SetLayoutFlags(mascot, AbsoluteLayoutFlags.XProportional);
+            _trailArea.Add(mascot);
+        }
+    }
+
+    private void AbortFloat()
+    {
+        _floatTarget?.AbortAnimation("nodeFloat");
+        _floatTarget = null;
     }
 
     // ─── Layout helpers ──────────────────────────────────────────────────────
@@ -50,271 +201,161 @@ public sealed class TrailView : ContentView
     private static Color Darken(Color c, float factor) =>
         new(c.Red * factor, c.Green * factor, c.Blue * factor, c.Alpha);
 
-    /// <summary>Flutuação contínua (sobe/desce suave) — efeito "float" do nó atual.</summary>
+    // Flutuação do nó atual: deslocamento (px) e duração de um ciclo completo (sobe + desce).
+    private const double FloatAmplitude = 10;
+    private const uint FloatPeriodMs = 1600;
+
     private static void StartFloat(VisualElement target)
     {
-        var anim = new Animation
-        {
-            { 0.0, 0.5, new Animation(v => target.TranslationY = v, 0, -8, Easing.SinInOut) },
-            { 0.5, 1.0, new Animation(v => target.TranslationY = v, -8, 0, Easing.SinInOut) },
-        };
-        target.Animate("nodeFloat", anim, length: 2400, repeat: () => true);
+        target.AbortAnimation("nodeFloat");
+        var anim = new Animation(
+            v => target.TranslationY = -FloatAmplitude * (1 - Math.Cos(v * 2 * Math.PI)) / 2);
+        target.Animate("nodeFloat", anim, length: FloatPeriodMs, repeat: () => true);
     }
 
-    // ─── Locked module card ──────────────────────────────────────────────────
+    // ─── Card "TRILHA" (estrutura fixa, atualizada in-place) ──────────────────
 
-    private static View BuildLockedCard(TrailModule m)
+    /// <summary>
+    /// Card de cabeçalho da trilha (o card "TRILHA" do Figma). Estrutura montada uma vez
+    /// e atualizada via <see cref="Update"/> a cada reciclagem.
+    /// </summary>
+    private sealed class TrailCard
     {
-        var grid = new Grid
+        public Border View { get; }
+
+        private readonly Border _iconChip;
+        private readonly Label _icon;
+        private readonly Label _label;
+        private readonly Label _title;
+        private readonly Label _subtitle;
+        private readonly Border _countBadge;
+        private readonly Label _count;
+
+        public TrailCard()
         {
-            ColumnDefinitions =
+            _icon = new Label
             {
-                new ColumnDefinition(GridLength.Auto),
-                new ColumnDefinition(GridLength.Star),
-            },
-            ColumnSpacing = 12,
-            VerticalOptions = LayoutOptions.Center,
-        };
-
-        var lockLabel = new Label
-        {
-            Text = "🔒",
-            FontSize = 18,
-            VerticalOptions = LayoutOptions.Center,
-        };
-        grid.Add(lockLabel, 0, 0);
-
-        var texts = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
-        texts.Add(new Label { Text = m.Title, FontSize = 14, FontAttributes = FontAttributes.Bold, TextColor = Colors.White });
-        if (!string.IsNullOrWhiteSpace(m.Subtitle))
-            texts.Add(new Label { Text = m.Subtitle, FontSize = 12, TextColor = C("#5a5490") });
-        grid.Add(texts, 1, 0);
-
-        return new Border
-        {
-            Margin = new Thickness(16, 8),
-            Padding = 16,
-            Opacity = 0.55,
-            BackgroundColor = C("#1e1c3a"),
-            Stroke = C("#3d3870"),
-            StrokeThickness = 1,
-            StrokeShape = new RoundRectangle { CornerRadius = 18 },
-            Content = grid,
-        };
-    }
-
-    // ─── Active module ───────────────────────────────────────────────────────
-
-    private View BuildActive(TrailModule m)
-    {
-        var stack = new VerticalStackLayout { Spacing = 0 };
-        stack.Add(BuildHeaderCard(m));
-        stack.Add(BuildTrailArea(m));
-        return stack;
-    }
-
-    private static View BuildHeaderCard(TrailModule m)
-    {
-        var accent = C(m.AccentColor);
-
-        var headerBrush = new LinearGradientBrush
-        {
-            StartPoint = new Point(0, 0),
-            EndPoint = new Point(1, 1),
-            GradientStops =
-            {
-                new GradientStop(C(m.GradientFrom).WithAlpha(0.45f), 0f),
-                new GradientStop(C(m.GradientTo).WithAlpha(0.22f), 1f),
-            },
-        };
-
-        // Linha 1: emoji + (módulo/level + título) + contador
-        var emojiChip = new Border
-        {
-            WidthRequest = 36,
-            HeightRequest = 36,
-            BackgroundColor = accent.WithAlpha(0.3f),
-            StrokeThickness = 0,
-            StrokeShape = new RoundRectangle { CornerRadius = 12 },
-            Content = new Label
-            {
-                Text = m.Emoji,
                 FontSize = 18,
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Center,
-            },
-        };
-
-        var titleStack = new VerticalStackLayout { Spacing = 0, VerticalOptions = LayoutOptions.Center };
-        titleStack.Add(new Label
-        {
-            Text = m.HeaderLabel,
-            FontSize = 11,
-            FontAttributes = FontAttributes.Bold,
-            TextColor = C("#a78bfa"),
-            CharacterSpacing = 1.5,
-        });
-        titleStack.Add(new Label
-        {
-            Text = m.Title,
-            FontSize = 16,
-            FontAttributes = FontAttributes.Bold,
-            TextColor = Colors.White,
-        });
-
-        var countLabel = new Label
-        {
-            Text = m.CountText,
-            FontSize = 12,
-            FontAttributes = FontAttributes.Bold,
-            TextColor = C("#8a85b8"),
-            VerticalOptions = LayoutOptions.Center,
-        };
-
-        var row1 = new Grid
-        {
-            ColumnDefinitions =
+            };
+            _iconChip = new Border
             {
-                new ColumnDefinition(GridLength.Auto),
-                new ColumnDefinition(GridLength.Star),
-                new ColumnDefinition(GridLength.Auto),
-            },
-            ColumnSpacing = 12,
-        };
-        row1.Add(emojiChip, 0, 0);
-        row1.Add(titleStack, 1, 0);
-        row1.Add(countLabel, 2, 0);
+                WidthRequest = 40,
+                HeightRequest = 40,
+                StrokeThickness = 0,
+                StrokeShape = new RoundRectangle { CornerRadius = 12 },
+                Content = _icon,
+            };
 
-        // Linha 2: destaque "TRILHA ATIVA" + percentual
-        var activeTexts = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
-        activeTexts.Add(new Label
-        {
-            Text = "TRILHA ATIVA",
-            FontSize = 10,
-            FontAttributes = FontAttributes.Bold,
-            TextColor = C("#c4b5fd"),
-            CharacterSpacing = 1.5,
-        });
-        activeTexts.Add(new Label
-        {
-            Text = m.ActiveTrailTitle,
-            FontSize = 14,
-            FontAttributes = FontAttributes.Bold,
-            TextColor = Colors.White,
-        });
-        if (!string.IsNullOrWhiteSpace(m.Subtitle))
-            activeTexts.Add(new Label { Text = m.Subtitle, FontSize = 12, TextColor = C("#c4b8ff") });
-
-        var percentCircle = new Border
-        {
-            WidthRequest = 38,
-            HeightRequest = 38,
-            BackgroundColor = accent,
-            StrokeThickness = 0,
-            StrokeShape = new RoundRectangle { CornerRadius = 19 },
-            VerticalOptions = LayoutOptions.Center,
-            Content = new Label
+            _label = new Label
             {
-                Text = m.ProgressPercentText,
-                FontSize = 11,
+                Text = "TRILHA",
+                FontSize = 10,
+                FontAttributes = FontAttributes.Bold,
+                TextColor = Colors.White.WithAlpha(0.75f),
+                CharacterSpacing = 1.5,
+            };
+            _title = new Label
+            {
+                FontSize = 16,
+                FontAttributes = FontAttributes.Bold,
+                TextColor = Colors.White,
+            };
+            _subtitle = new Label
+            {
+                FontSize = 12,
+                TextColor = Colors.White.WithAlpha(0.8f),
+                LineBreakMode = LineBreakMode.TailTruncation,
+                MaxLines = 1,
+            };
+            var texts = new VerticalStackLayout { Spacing = 1, VerticalOptions = LayoutOptions.Center };
+            texts.Add(_label);
+            texts.Add(_title);
+            texts.Add(_subtitle);
+
+            _count = new Label
+            {
+                FontSize = 12,
                 FontAttributes = FontAttributes.Bold,
                 TextColor = Colors.White,
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Center,
-            },
-        };
-
-        var row2Grid = new Grid
-        {
-            ColumnDefinitions =
-            {
-                new ColumnDefinition(GridLength.Star),
-                new ColumnDefinition(GridLength.Auto),
-            },
-            ColumnSpacing = 10,
-        };
-        row2Grid.Add(activeTexts, 0, 0);
-        row2Grid.Add(percentCircle, 1, 0);
-
-        var row2 = new Border
-        {
-            Margin = new Thickness(0, 12, 0, 0),
-            Padding = new Thickness(12, 10),
-            BackgroundColor = accent.WithAlpha(0.5f),
-            Stroke = Colors.White.WithAlpha(0.15f),
-            StrokeThickness = 1,
-            StrokeShape = new RoundRectangle { CornerRadius = 12 },
-            Content = row2Grid,
-        };
-
-        var inner = new VerticalStackLayout { Spacing = 0 };
-        inner.Add(row1);
-        inner.Add(row2);
-
-        return new Border
-        {
-            Margin = new Thickness(16, 8, 16, 4),
-            Padding = 16,
-            Background = headerBrush,
-            Stroke = accent.WithAlpha(0.4f),
-            StrokeThickness = 1,
-            StrokeShape = new RoundRectangle { CornerRadius = 18 },
-            Content = inner,
-        };
-    }
-
-    private View BuildTrailArea(TrailModule m)
-    {
-        var abs = new AbsoluteLayout { HeightRequest = m.TrailHeight };
-
-        // Caminho tracejado (fica atrás dos nós).
-        var drawable = new TrailPathDrawable
-        {
-            FracX = m.Nodes.Select(n => FracOf(n.Index)).ToList(),
-            Cy = m.Nodes.Select(n => CyOf(n.Index)).ToList(),
-            NodeCompleted = m.Nodes.Select(n => n.IsCompleted).ToList(),
-            AccentColor = m.AccentColor,
-        };
-        var graphics = new GraphicsView { Drawable = drawable, InputTransparent = true };
-        AbsoluteLayout.SetLayoutBounds(graphics, new Rect(0, 0, 1, 1));
-        AbsoluteLayout.SetLayoutFlags(graphics, AbsoluteLayoutFlags.All);
-        abs.Add(graphics);
-
-        // Nós.
-        foreach (var node in m.Nodes)
-        {
-            var container = BuildNode(m, node);
-            double bubbleSize = node.IsBoss ? 72 : node.IsCurrent ? 68 : 60;
-            double pillOffset = node.IsCurrent ? 32 : 0;
-            double topY = CyOf(node.Index) - (pillOffset + bubbleSize / 2);
-
-            AbsoluteLayout.SetLayoutBounds(container, new Rect(FracOf(node.Index), topY, 100, AbsoluteLayout.AutoSize));
-            AbsoluteLayout.SetLayoutFlags(container, AbsoluteLayoutFlags.XProportional);
-            abs.Add(container);
-        }
-
-        // Mascote junto ao nó atual.
-        int curIdx = m.CurrentIndex;
-        if (curIdx >= 0)
-        {
-            var mascot = BuildMascot();
-            double mFrac = FracOf(curIdx) switch
-            {
-                0.22 => 0.66,
-                0.76 => 0.30,
-                _ => 0.85,
             };
-            AbsoluteLayout.SetLayoutBounds(mascot, new Rect(mFrac, CyOf(curIdx) - 44, 120, AbsoluteLayout.AutoSize));
-            AbsoluteLayout.SetLayoutFlags(mascot, AbsoluteLayoutFlags.XProportional);
-            abs.Add(mascot);
+            _countBadge = new Border
+            {
+                Padding = new Thickness(10, 4),
+                StrokeThickness = 0,
+                StrokeShape = new RoundRectangle { CornerRadius = 12 },
+                VerticalOptions = LayoutOptions.Center,
+                Content = _count,
+            };
+
+            var grid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto),
+                },
+                ColumnSpacing = 12,
+            };
+            grid.Add(_iconChip, 0, 0);
+            grid.Add(texts, 1, 0);
+            grid.Add(_countBadge, 2, 0);
+
+            View = new Border
+            {
+                Margin = new Thickness(16, 8, 16, 4),
+                Padding = 14,
+                StrokeThickness = 1,
+                StrokeShape = new RoundRectangle { CornerRadius = 16 },
+                Content = grid,
+            };
         }
 
-        return abs;
+        public void Update(Trail t)
+        {
+            var accent = C(t.AccentColor);
+
+            // Gradiente na cor de destaque do módulo (não no roxo do tema, que se confunde com o fundo).
+            View.Background = new LinearGradientBrush
+            {
+                StartPoint = new Point(0, 0),
+                EndPoint = new Point(1, 0),
+                GradientStops =
+                {
+                    new GradientStop(accent, 0f),
+                    new GradientStop(Lighten(accent, 0.18f), 1f),
+                },
+            };
+            View.Stroke = (t.IsLocked ? C("#3d3870") : Lighten(accent, 0.3f)).WithAlpha(0.5f);
+            View.Opacity = t.IsLocked ? 0.65 : 1.0;
+
+            _iconChip.BackgroundColor = Colors.White.WithAlpha(0.2f);
+            _icon.Text = t.IsLocked ? "🔒" : t.Emoji;
+            _title.Text = t.Title;
+            _subtitle.IsVisible = !string.IsNullOrWhiteSpace(t.Subtitle);
+            _subtitle.Text = t.Subtitle ?? "";
+
+            _countBadge.BackgroundColor = Colors.White.WithAlpha(0.2f);
+            _count.Text = t.CountText;
+        }
+
+        /// <summary>Clareia uma cor misturando-a com branco (mantém o alfa).</summary>
+        private static Color Lighten(Color c, float amt) => new(
+            c.Red + (1 - c.Red) * amt,
+            c.Green + (1 - c.Green) * amt,
+            c.Blue + (1 - c.Blue) * amt,
+            c.Alpha);
     }
 
-    private View BuildNode(TrailModule m, TrailNode node)
+    // ─── Nós e mascote (reconstruídos por trilha) ─────────────────────────────
+
+    private View BuildNode(Trail t, TrailNode node)
     {
-        var accent = C(m.AccentColor);
+        var accent = C(t.AccentColor);
         double bubbleSize = node.IsBoss ? 72 : node.IsCurrent ? 68 : 60;
 
         var container = new VerticalStackLayout
@@ -324,14 +365,12 @@ public sealed class TrailView : ContentView
             HorizontalOptions = LayoutOptions.Center,
         };
 
-        // Grupo que "flutua" (pílula + bolha) quando o nó é o atual.
         var nodeGroup = new VerticalStackLayout
         {
             Spacing = 6,
             HorizontalOptions = LayoutOptions.Center,
         };
 
-        // Pílula "COMEÇAR" acima do nó atual.
         if (node.IsCurrent)
         {
             nodeGroup.Add(new Border
@@ -352,7 +391,6 @@ public sealed class TrailView : ContentView
             });
         }
 
-        // Bolha. mainColor define a face; a base é uma versão mais escura (efeito 3D).
         Brush bubbleBrush;
         Color bubbleBorder;
         Color mainColor;
@@ -400,7 +438,6 @@ public sealed class TrailView : ContentView
 
         const double offsetY = 6;
 
-        // Face superior (botão clicável).
         var bubble = new Border
         {
             WidthRequest = bubbleSize,
@@ -414,8 +451,6 @@ public sealed class TrailView : ContentView
             Content = bubbleContent,
         };
 
-        // Base sólida mais escura, deslocada para baixo → sombra 3D "pressionável"
-        // (estilo kernel-ai/Duolingo: dois círculos empilhados, sem blur).
         var baseCircle = new Border
         {
             WidthRequest = bubbleSize,
@@ -440,7 +475,6 @@ public sealed class TrailView : ContentView
         var tap = new TapGestureRecognizer();
         tap.Tapped += async (_, _) =>
         {
-            // Afunda a face até a base e volta, depois navega.
             await bubble.TranslateTo(0, offsetY, 70, Easing.CubicIn);
             await bubble.TranslateTo(0, 0, 70, Easing.CubicOut);
 
@@ -452,22 +486,27 @@ public sealed class TrailView : ContentView
         nodeGroup.Add(holder);
         container.Add(nodeGroup);
 
-        // Flutuação contínua do nó atual (igual ao kernel-ai/Figma).
         if (node.IsCurrent)
         {
+            _floatTarget = nodeGroup;
             nodeGroup.Loaded += (_, _) => StartFloat(nodeGroup);
-            nodeGroup.Unloaded += (_, _) => nodeGroup.AbortAnimation("nodeFloat");
+            nodeGroup.Unloaded += (_, _) =>
+            {
+                nodeGroup.AbortAnimation("nodeFloat");
+                if (ReferenceEquals(_floatTarget, nodeGroup))
+                    _floatTarget = null;
+            };
         }
 
-        // Rótulo abaixo (apenas para nós não bloqueados, como no Figma).
-        if (!node.IsLocked)
+        // Nome da lição abaixo do nó — inclusive para lições bloqueadas (cor mais suave indica o cadeado).
+        if (!string.IsNullOrWhiteSpace(node.Title))
         {
             container.Add(new Label
             {
                 Text = node.Title,
                 FontSize = 12,
                 FontAttributes = FontAttributes.Bold,
-                TextColor = C("#c4b8ff"),
+                TextColor = node.IsLocked ? C("#8a85b8") : C("#c4b8ff"),
                 HorizontalTextAlignment = TextAlignment.Center,
                 HorizontalOptions = LayoutOptions.Center,
                 LineBreakMode = LineBreakMode.TailTruncation,

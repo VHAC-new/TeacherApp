@@ -2,12 +2,21 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:TeacherApp.App.Features.Exercise.ViewModels"
+             xmlns:controls="clr-namespace:TeacherApp.App.Core.Controls"
              x:Class="TeacherApp.App.Features.Exercise.Views.ResultsPage"
              x:DataType="vm:ResultsViewModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
+             BackgroundColor="#0E0D24">
 
-    <Grid x:Name="PageRoot" BackgroundColor="{AppThemeBinding Light={StaticResource PageBackground}, Dark={StaticResource PageBackgroundDark}}">
+    <ContentPage.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="0.3,1">
+            <GradientStop Color="#16133A" Offset="0.0" />
+            <GradientStop Color="#12112A" Offset="0.5" />
+            <GradientStop Color="#0E0D24" Offset="1.0" />
+        </LinearGradientBrush>
+    </ContentPage.Background>
+
+    <Grid x:Name="PageRoot">
 
         <ScrollView BackgroundColor="Transparent">
             <VerticalStackLayout x:Name="ResultsContent" Spacing="20" Padding="24,60,24,40"
@@ -26,19 +35,19 @@
                        HorizontalOptions="Center" TextColor="{Binding HeadlineColor}"
                        Opacity="0" TranslationY="12" />
 
-                <Label x:Name="SubtitleLabel" Text="You've completed the lesson!"
+                <Label x:Name="SubtitleLabel" Text="Você concluiu a lição!"
                        FontSize="16"
-                       TextColor="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}"
+                       TextColor="#8A85B8"
                        HorizontalOptions="Center"
                        Opacity="0" TranslationY="12" />
 
                 <!-- Score Card -->
                 <Border x:Name="ScoreCard" Padding="24" StrokeShape="RoundRectangle 16"
-                        Stroke="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}"
-                        BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource CardBackgroundDark}}"
+                        Stroke="#2A2650" StrokeThickness="1"
+                        BackgroundColor="#1A1E2E"
                         Margin="0,12,0,0">
                     <Border.Shadow>
-                        <Shadow Brush="#00000015" Offset="0,3" Radius="10" />
+                        <Shadow Brush="#00000040" Offset="0,3" Radius="10" />
                     </Border.Shadow>
 
                     <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="16">
@@ -46,44 +55,43 @@
                         <!-- Score % -->
                         <VerticalStackLayout Grid.Row="0" Spacing="4"
                                              HorizontalOptions="Center">
-                            <Label Text="Score" FontSize="14"
-                                   TextColor="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}"
+                            <Label Text="Pontuação" FontSize="14"
+                                   TextColor="#8A85B8"
                                    HorizontalOptions="Center" />
                             <Label Text="{Binding ScorePercent, StringFormat='{0}%'}"
                                    FontSize="40" FontAttributes="Bold"
-                                   TextColor="{StaticResource Primary}"
+                                   TextColor="#7C5DF7"
                                    HorizontalOptions="Center" />
                         </VerticalStackLayout>
 
-                        <BoxView Grid.Row="1" HeightRequest="1"
-                                 Color="{AppThemeBinding Light={StaticResource CardBorder}, Dark={StaticResource BorderDark}}" />
+                        <BoxView Grid.Row="1" HeightRequest="1" Color="#2A2650" />
 
                         <!-- Stats Row -->
                         <Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="8">
                             <VerticalStackLayout HorizontalOptions="Center" Spacing="2">
                                 <Label Text="{Binding CorrectCount}" FontSize="22"
-                                       FontAttributes="Bold" TextColor="{StaticResource Success}"
+                                       FontAttributes="Bold" TextColor="#34D399"
                                        HorizontalOptions="Center" />
-                                <Label Text="Correct" FontSize="12"
-                                       TextColor="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}"
+                                <Label Text="Acertos" FontSize="12"
+                                       TextColor="#8A85B8"
                                        HorizontalOptions="Center" />
                             </VerticalStackLayout>
 
                             <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="2">
                                 <Label Text="{Binding IncorrectCount}" FontSize="22"
-                                       FontAttributes="Bold" TextColor="#F44336"
+                                       FontAttributes="Bold" TextColor="#F87171"
                                        HorizontalOptions="Center" />
-                                <Label Text="Incorrect" FontSize="12"
-                                       TextColor="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}"
+                                <Label Text="Erros" FontSize="12"
+                                       TextColor="#8A85B8"
                                        HorizontalOptions="Center" />
                             </VerticalStackLayout>
 
                             <VerticalStackLayout Grid.Column="2" HorizontalOptions="Center" Spacing="2">
                                 <Label Text="{Binding TotalCount}" FontSize="22"
-                                       FontAttributes="Bold" TextColor="{StaticResource Primary}"
+                                       FontAttributes="Bold" TextColor="#C4B8FF"
                                        HorizontalOptions="Center" />
                                 <Label Text="Total" FontSize="12"
-                                       TextColor="{AppThemeBinding Light={StaticResource MutedForeground}, Dark={StaticResource MutedForegroundDark}}"
+                                       TextColor="#8A85B8"
                                        HorizontalOptions="Center" />
                             </VerticalStackLayout>
                         </Grid>
@@ -91,24 +99,26 @@
                 </Border>
 
                 <!-- Buttons -->
-                <VerticalStackLayout x:Name="ActionsPanel" Spacing="20" Opacity="0" TranslationY="16">
-                <Button Text="Continue Learning"
-                        Command="{Binding ContinueLearningCommand}"
-                        BackgroundColor="{StaticResource Primary}"
-                        TextColor="White" FontAttributes="Bold" FontSize="16"
-                        HeightRequest="54" CornerRadius="12"
-                        Margin="0,16,0,0" />
+                <VerticalStackLayout x:Name="ActionsPanel" Spacing="14" Opacity="0" TranslationY="16">
+                    <Button Text="Continuar aprendendo"
+                            Command="{Binding ContinueLearningCommand}"
+                            BackgroundColor="#7C5DF7"
+                            TextColor="White" FontAttributes="Bold" FontSize="16"
+                            HeightRequest="54" CornerRadius="14"
+                            Margin="0,16,0,0" />
 
-                <Button Text="Review Lesson"
-                        Command="{Binding ReviewLessonCommand}"
-                        BackgroundColor="{AppThemeBinding Light=Transparent, Dark={StaticResource CardBackgroundDark}}"
-                        TextColor="{StaticResource Primary}"
-                        FontAttributes="Bold" FontSize="16"
-                        HeightRequest="54" CornerRadius="12"
-                        BorderColor="{StaticResource Primary}" BorderWidth="2" />
+                    <Button Text="Revisar lição"
+                            Command="{Binding ReviewLessonCommand}"
+                            BackgroundColor="Transparent"
+                            TextColor="#C4B8FF"
+                            FontAttributes="Bold" FontSize="16"
+                            HeightRequest="54" CornerRadius="14"
+                            BorderColor="#7C5DF7" BorderWidth="2" />
                 </VerticalStackLayout>
 
             </VerticalStackLayout>
         </ScrollView>
+
+        <controls:ConfettiView x:Name="Confetti" InputTransparent="True" />
     </Grid>
 </ContentPage>

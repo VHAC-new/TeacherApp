@@ -13,6 +13,7 @@ public enum TrailNodeStatus
 public sealed class TrailNode
 {
     public required Guid Id { get; init; }
+    public required Guid TrailId { get; init; }
     public required Guid ModuleId { get; init; }
     public required string ModuleTitle { get; init; }
     public required string Title { get; init; }

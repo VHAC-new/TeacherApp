@@ -12,7 +12,7 @@
         <MudText Typo="Typo.h4">Lições</MudText>
         <MudText Typo="Typo.body2" Class="mud-text-secondary">Gerencie o conteúdo das lições</MudText>
     </div>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(async () => await OpenNewLessonAsync())" Disabled="@(_modules.Count == 0)">Nova Lição</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(async () => await OpenNewLessonAsync())" Disabled="@(_trails.Count == 0)">Nova Lição</MudButton>
 </MudStack>
 
 @* Filtros alinhados ao admin/Lessons.tsx (Figma Make): flex-row + gap, busca em flex:1 + input w-full, módulo à direita (flex:0) *@
@@ -32,17 +32,17 @@
     </div>
     <div style="flex:0 0 auto; min-width:12.5rem; max-width:100%;">
         <MudSelect T="Guid?"
-                   Value="_filterModuleId"
-                   ValueChanged="OnModuleFilterChangedAsync"
-                   Label="Módulo"
+                   Value="_filterTrailId"
+                   ValueChanged="OnTrailFilterChangedAsync"
+                   Label="Trilha"
                    Clearable="true"
                    Variant="Variant.Outlined"
                    Margin="Margin.Dense"
                    FullWidth="true">
-            <MudSelectItem T="Guid?" Value="@null">Todos</MudSelectItem>
-            @foreach (var m in _modules)
+            <MudSelectItem T="Guid?" Value="@null">Todas</MudSelectItem>
+            @foreach (var t in _trails)
             {
-                <MudSelectItem T="Guid?" Value="@m.Id">@m.Title</MudSelectItem>
+                <MudSelectItem T="Guid?" Value="@t.Id">@TrailLabel(t)</MudSelectItem>
             }
         </MudSelect>
     </div>
@@ -65,13 +65,13 @@ else
     <MudTable Items="@FilteredLessons" Hover="true" Striped="true" Breakpoint="Breakpoint.Sm">
         <HeaderContent>
             <MudTh>Título</MudTh>
-            <MudTh>Módulo</MudTh>
+            <MudTh>Trilha</MudTh>
             <MudTh>Áudio</MudTh>
             <MudTh Style="width: 200px;">Ações</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Título">@context.Title</MudTd>
-            <MudTd DataLabel="Módulo">@(_modules.FirstOrDefault(m => m.Id == context.ModuleId)?.Title ?? "—")</MudTd>
+            <MudTd DataLabel="Trilha">@(TrailLabelById(context.TrailId))</MudTd>
             <MudTd DataLabel="Áudio">
                 @if (!string.IsNullOrEmpty(context.AudioFileName))
                 {
@@ -112,16 +112,15 @@ else
                                Dense="true">
                         @foreach (var l in LessonsForPicker)
                         {
-                            var modTitle = _modules.FirstOrDefault(m => m.Id == l.ModuleId)?.Title ?? "—";
-                            <MudSelectItem T="Guid" Value="@l.Id">@l.Title · @modTitle</MudSelectItem>
+                            <MudSelectItem T="Guid" Value="@l.Id">@l.Title · @TrailLabelById(l.TrailId)</MudSelectItem>
                         }
                     </MudSelect>
                 }
                 <MudTextField @bind-Value="_form.Title" For="@(() => _form.Title)" Label="Título da lição" Variant="Variant.Outlined" />
-                <MudSelect T="string" @bind-Value="_form.ModuleId" Label="Módulo" Variant="Variant.Outlined" Required="true">
-                    @foreach (var m in _modules)
+                <MudSelect T="string" @bind-Value="_form.TrailId" Label="Trilha" Variant="Variant.Outlined" Required="true">
+                    @foreach (var t in _trails)
                     {
-                        <MudSelectItem T="string" Value="@m.Id.ToString()">@m.Title</MudSelectItem>
+                        <MudSelectItem T="string" Value="@t.Id.ToString()">@TrailLabel(t)</MudSelectItem>
                     }
                 </MudSelect>
                 <MudTextField @bind-Value="_form.Description" Label="Conteúdo da lição" Variant="Variant.Outlined" Lines="10"
@@ -263,28 +262,42 @@ else
     };
 
     private List<TeacherApp.Contracts.Modules.ModuleResponse> _modules = [];
+    private List<TeacherApp.Contracts.Trails.TrailResponse> _trails = [];
     private List<TeacherApp.Contracts.Lessons.LessonResponse> _lessons = [];
     private List<TeacherApp.Contracts.Lessons.LessonResponse> _lessonPickerList = [];
     private bool _lessonPickerReady;
     private List<TeacherApp.Contracts.Media.MediaResponse> _audioMedia = [];
     private bool _loading = true;
     private string? _error;
-    private Guid? _filterModuleId;
+    private Guid? _filterTrailId;
     private string? _searchTerm;
 
     private List<TeacherApp.Contracts.Lessons.LessonResponse> FilteredLessons =>
         _lessons
             .Where(l => string.IsNullOrWhiteSpace(_searchTerm)
                 || l.Title.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
-                || (_modules.FirstOrDefault(m => m.Id == l.ModuleId)?.Title?.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ?? false))
+                || TrailLabelById(l.TrailId).Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
             .OrderBy(l => l.Order)
             .ToList();
 
     private void OnSearchChanged() { }
 
+    // R\u00F3tulo "Trilha \u00B7 M\u00F3dulo" para uma trilha.
+    private string TrailLabel(TeacherApp.Contracts.Trails.TrailResponse trail)
+    {
+        var modTitle = _modules.FirstOrDefault(m => m.Id == trail.ModuleId)?.Title ?? "\u2014";
+        return $"{trail.Title} \u00B7 {modTitle}";
+    }
+
+    private string TrailLabelById(Guid trailId)
+    {
+        var trail = _trails.FirstOrDefault(t => t.Id == trailId);
+        return trail is null ? "\u2014" : TrailLabel(trail);
+    }
+
     private IEnumerable<TeacherApp.Contracts.Lessons.LessonResponse> LessonsForPicker =>
         _lessonPickerList
-            .OrderBy(l => _modules.FirstOrDefault(m => m.Id == l.ModuleId)?.Title ?? "\uFFFF", StringComparer.OrdinalIgnoreCase)
+            .OrderBy(l => TrailLabelById(l.TrailId), StringComparer.OrdinalIgnoreCase)
             .ThenBy(l => l.Order)
             .ThenBy(l => l.Title, StringComparer.OrdinalIgnoreCase);
 
@@ -305,7 +318,7 @@ else
 
     private sealed class LessonFormModel
     {
-        public string ModuleId { get; set; } = "";
+        public string TrailId { get; set; } = "";
 
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Título obrigatório")]
         public string Title { get; set; } = "";
@@ -319,6 +332,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         _modules = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Modules.ModuleResponse>>("api/v1/admin/modules") ?? [];
+        _trails = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Trails.TrailResponse>>("api/v1/admin/trails") ?? [];
         await LoadMediaAsync();
         await LoadAsync();
     }
@@ -345,7 +359,7 @@ else
         _error = null;
         try
         {
-            var query = _filterModuleId.HasValue ? $"?moduleId={_filterModuleId}" : "";
+            var query = _filterTrailId.HasValue ? $"?trailId={_filterTrailId}" : "";
             _lessons = await Http.GetFromJsonAsync<List<TeacherApp.Contracts.Lessons.LessonResponse>>($"api/v1/admin/lessons{query}") ?? [];
         }
         catch (HttpRequestException)
@@ -358,9 +372,9 @@ else
         }
     }
 
-    private async Task OnModuleFilterChangedAsync(Guid? id)
+    private async Task OnTrailFilterChangedAsync(Guid? id)
     {
-        _filterModuleId = id;
+        _filterTrailId = id;
         await LoadAsync();
     }
 
@@ -403,7 +417,7 @@ else
         _form = lesson is null
             ? new LessonFormModel
             {
-                ModuleId = (_filterModuleId ?? _modules.FirstOrDefault()?.Id ?? Guid.Empty).ToString(),
+                TrailId = (_filterTrailId ?? _trails.FirstOrDefault()?.Id ?? Guid.Empty).ToString(),
                 Order = _lessons.Count + 1
             }
             : new LessonFormModel
@@ -411,7 +425,7 @@ else
                 Title = lesson.Title,
                 Description = lesson.Description,
                 Order = lesson.Order,
-                ModuleId = lesson.ModuleId.ToString(),
+                TrailId = lesson.TrailId.ToString(),
                 AudioMediaId = lesson.AudioMediaId,
                 AudioFileName = lesson.AudioFileName
             };
@@ -450,23 +464,23 @@ else
             HttpResponseMessage response;
             if (_editing is null)
             {
-                if (!Guid.TryParse(_form.ModuleId, out var moduleId))
+                if (!Guid.TryParse(_form.TrailId, out var trailId))
                 {
-                    _formError = "Selecione um módulo.";
+                    _formError = "Selecione uma trilha.";
                     return;
                 }
                 response = await Http.PostAsJsonAsync("api/v1/admin/lessons",
-                    new TeacherApp.Contracts.Lessons.CreateLessonRequest(moduleId, _form.Title, _form.Description, _form.Order, _form.AudioMediaId));
+                    new TeacherApp.Contracts.Lessons.CreateLessonRequest(trailId, _form.Title, _form.Description, _form.Order, _form.AudioMediaId));
             }
             else
             {
-                if (!Guid.TryParse(_form.ModuleId, out var editModuleId))
+                if (!Guid.TryParse(_form.TrailId, out var editTrailId))
                 {
-                    _formError = "Selecione um módulo.";
+                    _formError = "Selecione uma trilha.";
                     return;
                 }
                 response = await Http.PutAsJsonAsync($"api/v1/admin/lessons/{_editing.Id}",
-                    new TeacherApp.Contracts.Lessons.UpdateLessonRequest(_form.Title, _form.Description, _form.Order, editModuleId, _form.AudioMediaId));
+                    new TeacherApp.Contracts.Lessons.UpdateLessonRequest(_form.Title, _form.Description, _form.Order, editTrailId, _form.AudioMediaId));
             }
 
             if (!response.IsSuccessStatusCode)

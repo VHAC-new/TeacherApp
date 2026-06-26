@@ -44,30 +44,62 @@
             </HorizontalStackLayout>
         </Grid>
 
-        <!-- Trilha -->
-        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
-            <ScrollView>
-                <VerticalStackLayout Spacing="0" Padding="0,4,0,32">
+        <!-- Conteúdo: jornada virtualizada + camadas de carregamento/erro -->
+        <Grid Grid.Row="1">
 
-                    <Label Text="{Binding Error}" TextColor="#F87171" FontSize="14"
-                           Margin="20,8" HorizontalOptions="Center"
-                           IsVisible="{Binding Error, Converter={StaticResource IsNotNullConverter}}" />
+            <!-- Jornada (CollectionView virtualizado por módulo) -->
+            <CollectionView ItemsSource="{Binding Modules}"
+                            IsVisible="{Binding IsReady}"
+                            BackgroundColor="Transparent"
+                            SelectionMode="None"
+                            VerticalScrollBarVisibility="Never">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Vertical" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:TrailModule">
+                        <controls:ModuleTrailView
+                            NodeCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:LessonsViewModel}}, Path=NavigateToNodeCommand}"
+                            EnsureLoadedCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:LessonsViewModel}}, Path=EnsureModuleLoadedCommand}" />
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+                <CollectionView.Footer>
+                    <BoxView HeightRequest="32" Color="Transparent" />
+                </CollectionView.Footer>
+                <CollectionView.EmptyView>
+                    <Label Text="Nenhum módulo disponível."
+                           TextColor="#5A5490" HorizontalOptions="Center" Margin="0,60,0,0" />
+                </CollectionView.EmptyView>
+            </CollectionView>
 
-                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Modules}" Spacing="0">
-                        <BindableLayout.ItemTemplate>
-                            <DataTemplate x:DataType="models:TrailModule">
-                                <controls:TrailView
-                                    NodeCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:LessonsViewModel}}, Path=NavigateToNodeCommand}" />
-                            </DataTemplate>
-                        </BindableLayout.ItemTemplate>
-                        <BindableLayout.EmptyView>
-                            <Label Text="Nenhum módulo disponível."
-                                   TextColor="#5A5490" HorizontalOptions="Center" Margin="0,60,0,0" />
-                        </BindableLayout.EmptyView>
-                    </VerticalStackLayout>
+            <!-- Camada "Carregando" com o lobo animado -->
+            <VerticalStackLayout x:Name="LoadingOverlay"
+                                 IsVisible="{Binding IsLoading}"
+                                 Spacing="18"
+                                 HorizontalOptions="Center" VerticalOptions="Center">
+                <Image x:Name="LoadingMascot"
+                       Source="wolf_mascot.png"
+                       WidthRequest="96" HeightRequest="96"
+                       HorizontalOptions="Center" />
+                <Label Text="Carregando sua trilha…"
+                       FontSize="15" FontAttributes="Bold"
+                       TextColor="#C4B8FF" HorizontalOptions="Center" />
+            </VerticalStackLayout>
 
-                </VerticalStackLayout>
-            </ScrollView>
-        </RefreshView>
+            <!-- Camada de erro -->
+            <VerticalStackLayout IsVisible="{Binding IsError}"
+                                 Spacing="14" Padding="32"
+                                 HorizontalOptions="Center" VerticalOptions="Center">
+                <Label Text="{Binding Error}"
+                       TextColor="#F87171" FontSize="15"
+                       HorizontalTextAlignment="Center" HorizontalOptions="Center" />
+                <Button Text="Tentar novamente"
+                        Command="{Binding RetryCommand}"
+                        BackgroundColor="#7C5DF7" TextColor="White"
+                        CornerRadius="12" HeightRequest="48" Padding="24,0"
+                        HorizontalOptions="Center" />
+            </VerticalStackLayout>
+
+        </Grid>
     </Grid>
 </ContentPage>

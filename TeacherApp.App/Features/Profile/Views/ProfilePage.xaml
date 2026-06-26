@@ -36,9 +36,8 @@
             </Border>
         </Grid>
 
-        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
-            <ScrollView>
-                <VerticalStackLayout Spacing="16" Padding="16,8,16,32">
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="16" Padding="16,8,16,32">
 
                     <Label Text="{Binding Error}" TextColor="#F87171" FontSize="14"
                            HorizontalOptions="Center"
@@ -155,8 +154,7 @@
                         </Grid>
                     </Border>
 
-                </VerticalStackLayout>
-            </ScrollView>
-        </RefreshView>
+            </VerticalStackLayout>
+        </ScrollView>
     </Grid>
 </ContentPage>
